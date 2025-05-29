@@ -1,0 +1,13 @@
+{
+  "name": "webgl",
+  "description": "WebGL",
+  "license": "UNLICENSED",
+  "author": "Vahaz",
+  "scripts": {
+    "build": "tsc --watch"
+  },
+  "dependencies": {
+    "https-localhost": "^4.7.1",
+    "typescript": "^5.8.3"
+  }
+}
