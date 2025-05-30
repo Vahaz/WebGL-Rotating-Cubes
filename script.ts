@@ -166,7 +166,11 @@ void main() {
  * - The class as a method "update" with dt (delta time) argument.
  * - "Update" update the position by adding: position = ((position + velocity) * dt)
  * - Position is expressed in pixels and Velocity by pixels per seconds.
- * @method update
+ * @constructor position: [number, number]
+ * @constructor velocity: [number, number]
+ * @constructor size: number
+ * @constructor vao: WebGLVertexArrayObject
+ * @method update - dt: number
  */
 class MovingShape {
     constructor(
