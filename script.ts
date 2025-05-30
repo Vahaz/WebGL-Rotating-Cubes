@@ -7,7 +7,7 @@ function showError(msg: string) {
     console.log(msg);
 }
 
-function createStaticVertexBuffer(gl: WebGL2RenderingContext, data: ArrayBuffer){
+function createStaticVertexBuffer(gl: WebGL2RenderingContext, data: ArrayBuffer) {
     const buffer = gl.createBuffer(); // Create a WebGL Buffer type. (Opaque Handle)
     if(!buffer) { showError("Failed to allocate buffer space"); return null }
     
@@ -55,8 +55,22 @@ function createTwoBufferVao(
     return vao;
 }
 
+function getContext(canvas: HTMLCanvasElement) {
+    const gl = canvas.getContext('webgl2');
+    if(!gl) {
+        const isWebGLSupported = !!(document.createElement('canvas')).getContext('webgl');
+        if(isWebGLSupported) {
+            throw new Error("WebGL2 is not supported - try using a different browser.");
+        } else {
+            throw new Error("WebGL is not supported - try using a different browser.");
+        }
+    }
+    return gl;
+}
+
 // [Top-x, Top-y, Left-x, Left-y, Right-x, Right-y]
 // JS uses 64bit Arrays, and CPU prefer 32bits for half numbers.
+// "Default" values, but changed by shaders.
 const triangleVertices = new Float32Array([0, 1, -1, -1, 1, -1]);
 
 // Colors !
@@ -72,6 +86,14 @@ const gradientTriangleColors = new Uint8Array([
 ]);
 
 // Shader code, need to be placed here to be compiled and used by the GPU.
+// " `#version 300 es " : in this order is mandatory!
+// gl_Position = vec4(x, y, z-sorting [-1;1], w) [built-in]
+// x, y and z are devided by w.
+// Take the canvasSize to devide the finalPosition.
+// The finalPosition: vertexPosition * size + location.
+// to make sure they are in range, we / the finalPos by the canvasSizes
+// ClipPosition is a %, so we need to make it in range from -1 to 1 by adding (*2 - 1)
+// We input a color to the fragment color to pass the color along the shaders.
 const vertexShaderCode = `#version 300 es
 precision mediump float;
 
@@ -91,15 +113,9 @@ void main() {
     gl_Position = vec4(clipPosition, 0.0, 1.0);
 }
 `;
-// " `#version 300 es " : in this order is mandatory!
-// gl_Position = vec4(x, y, z-sorting [-1;1], w) [built-in]
-// x, y and z are devided by w.
-// Take the canvasSize to devide the finalPosition.
-// The finalPosition: vertexPosition * size + location.
-// to make sure they are in range, we / the finalPos by the canvasSizes
-// ClipPosition is a %, so we need to make it in range from -1 to 1 by adding (*2 - 1)
-// We input a color to the fragment color to pass the color along the shaders.
 
+// We need to specify here the variables, no built-in inputs.
+// We get the fragmentColor from the vertexShader
 const fragmentShaderCode = `#version 300 es
 precision mediump float;
 
@@ -110,17 +126,31 @@ void main() {
     outputColor = vec4(fragmentColor, 1.0);
 }
 `;
-// We need to specify here the variables, no built-in inputs.
-// We get the fragmentColor from the vertexShader
 
+// Create a Class "MovingShape" with a position, velocity, size and vao arguments.
+// The class as a method "update" with dt (delta time) argument.
+// "Update" update the position by adding: position = ((position + velocity) * dt)
+// Position is expressed in pixels and Velocity by pixels per seconds.
+class MovingShape {
+    constructor(
+        public position: [number, number],
+        public velocity: [number, number],
+        public size: number,
+        public vao: WebGLVertexArrayObject) {}
+    update(dt: number) {
+        this.position[0] += this.velocity[0] * dt;
+        this.position[1] += this.velocity[1] * dt;
+    }
+}
+
+//
+// DEMO
+//
 function main() {
-    // Get the canvas
-    const canvas = document.getElementById("webgl-canvas");
-    if(!canvas || !(canvas instanceof HTMLCanvasElement)) return showError("No Element with ID: #webgl-canvas");
+    const canvas = document.getElementById("webgl-canvas"); // Get the canvas
+    if(!canvas || !(canvas instanceof HTMLCanvasElement)) throw new Error("Failed to get canvas element.");
     
-    // Get the WebGL2 context
-    const gl = canvas.getContext("webgl2");
-    if(!gl || gl === null) return showError("WebGL is not initialize.");
+    const gl = getContext(canvas); // Get the WebGL2 context
 
     // Create vertex buffers
     const triangleGeoBuffer = createStaticVertexBuffer(gl, triangleVertices);
@@ -158,7 +188,7 @@ function main() {
         return showError(error || "No program debug log provided.");
     }
 
-    // Get the uniforms from shaders.
+    // Get the data from "in" in shader code.
     const vertexPositionAttribute = gl.getAttribLocation(program, 'vertexPosition');
     const vertexColorAttribute = gl.getAttribLocation(program, 'vertexColor');
     if(vertexPositionAttribute < 0 || vertexColorAttribute < 0) return showError("Failed to get Attribute Location for vertexPosition.");
@@ -179,33 +209,52 @@ function main() {
         return null;
     }
 
-    // 1. Output Merger → Merge the shaded pixel fragment with the existing out image.
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
-    gl.clearColor(0.08, 0.08, 0.08, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // Setup logical objects.
+    const triangle1 = new MovingShape([300, 600], [50, 5], 200, rgbTriangleVAO);
+    const triangle2 = new MovingShape([100, 400], [-50, -5], 100, gradientTriangleVAO);
 
-    // 2. Rasterizer → Wich pixel are part of the Vertices.
-    gl.viewport(0, 0, canvas.width, canvas.height) // Wich part is modified by OpenGL.
 
-    // 3. GPU Program → Pair Vertex & Fragment shaders.
-    gl.useProgram(program);
+    // Add a function to call it each frame.
+    // 1. Output Merger: Merge the shaded pixel fragment with the existing out image.
+    // 2. Rasterizer: Wich pixel are part of the Vertices + Wich part is modified by OpenGL.
+    // 3. GPU Program: Pair Vertex & Fragment shaders.
+    // 4. Uniforms: Setting them (can be set anywhere) (size/loc in pixels (px))
+    // 5. Draw Calls: (w/ Primitive assembly + Triangles)
+    let lastFrameTime = performance.now(); // Time between last frame / now.
+    const frame = function(){
+        // Calculate dt with time in seconds between each frame.
+        const thisFrameTime = performance.now();
+        const dt = (thisFrameTime - lastFrameTime) / 1000;
+        lastFrameTime = thisFrameTime;
 
-    // 4 Setting our Uniforms (can be set anywhere)
-    gl.uniform2f(canvasSizeUniform, canvas.width, canvas.height);
+        // Update shapes
+        triangle1.update(dt);
+        triangle2.update(dt);
 
-    // 5. Draws Calls (also config primitive assembly)
-    // First Triangle
-    gl.uniform1f(sizeUniform, 200); // size in pixels.
-    gl.uniform2f(locationUniform, canvas.width / 2, canvas.height / 2); // location in pixels.
-    gl.bindVertexArray(rgbTriangleVAO);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+        gl.clearColor(0.08, 0.08, 0.08, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    // Second Triangle
-    gl.uniform1f(sizeUniform, 100); // size in pixels.
-    gl.uniform2f(locationUniform, canvas.width / 1.5, canvas.height / 1.5); // location in pixels.
-    gl.bindVertexArray(gradientTriangleVAO);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
+        gl.viewport(0, 0, canvas.width, canvas.height)
+        gl.useProgram(program);
+
+        gl.uniform2f(canvasSizeUniform, canvas.width, canvas.height);
+
+        gl.uniform1f(sizeUniform, triangle1.size);
+        gl.uniform2f(locationUniform, triangle1.position[0], triangle1.position[1]);
+        gl.bindVertexArray(rgbTriangleVAO);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+        gl.uniform1f(sizeUniform, triangle2.size);
+        gl.uniform2f(locationUniform, triangle2.position[0], triangle2.position[1]);
+        gl.bindVertexArray(gradientTriangleVAO);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+        requestAnimationFrame(frame); // Loop calls, each time the drawing is ready.
+    };
+    requestAnimationFrame(frame); // First call, as soon, as the browser is ready.
+    
 }
 
 showError("No Errors! 🌞")

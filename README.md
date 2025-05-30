@@ -17,6 +17,9 @@ usages:
  - WebGL GLSL Editor : edit and compile shaders
  - WebGl Syntax Hint : autocomplete
 
+
+## DEV LOG #0
+
 What I Learned :
 1. CPU as hard time working on multi-tasking, why the existance of GPU.
 2. Different Graphics APIs. (OpenGL, DirectX or Vulkan..)
@@ -26,4 +29,23 @@ What I Learned :
 
 Process:
 1. Get the HTML tag "canvas" and request a WebGL2 context.
-2. We create a "Buffer" (a place in memory)
+2. We create "Buffer". (place in memory)
+2.5 Bind it to an Array with static data.
+3. We create "Vertex Shader", bind it the source code & compile it.
+4. We create "Fragment Shader", bind it the source code & compile it.
+5. We create "Program" and link the compiled shaders to it.
+6. Retrieve the data from shader code "in". (Vertex position & color)
+7. Retrieve the data from shader uniforms. (location, size & canvas)
+8. Create Array, bind it and enable the Vertex position & color attributes.
+8.5 Specify the size, type of data and parameters of the attributes.
+9. Clear the canvas
+10. Set the viewport for the Rasterizer
+11. Set the Program in use
+12. Set the uniforms data, bind the 8. array and draw the vertices.
+
+## DEV LOG #1
+
+Now, we want and animation (https://youtu.be/lLa6XkVLj0w)
+
+So, we move the 9 to 12 (Canvas widht/height, Clearing the canvas, etc) into it own function.
+This allow us to call it multiple times. (Thanks to a built-in js function)
