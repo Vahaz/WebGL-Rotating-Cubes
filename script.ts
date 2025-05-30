@@ -209,10 +209,11 @@ function main() {
         return null;
     }
 
-    // Setup logical objects.
-    const triangle1 = new MovingShape([300, 600], [50, 5], 200, rgbTriangleVAO);
-    const triangle2 = new MovingShape([100, 400], [-50, -5], 100, gradientTriangleVAO);
-
+    // Setup logical objects in an array to easily loop/create them.
+    let shapes: MovingShape[] = [
+        new MovingShape([200, 100], [50, 5], 100, rgbTriangleVAO),
+        new MovingShape([300, 400], [-50, -5], 50, gradientTriangleVAO)
+    ];
 
     // Add a function to call it each frame.
     // 1. Output Merger: Merge the shaded pixel fragment with the existing out image.
@@ -228,8 +229,9 @@ function main() {
         lastFrameTime = thisFrameTime;
 
         // Update shapes
-        triangle1.update(dt);
-        triangle2.update(dt);
+        shapes.forEach((shape) => {
+            shape.update(dt);
+        });
 
         canvas.width = canvas.clientWidth;
         canvas.height = canvas.clientHeight;
@@ -241,15 +243,12 @@ function main() {
 
         gl.uniform2f(canvasSizeUniform, canvas.width, canvas.height);
 
-        gl.uniform1f(sizeUniform, triangle1.size);
-        gl.uniform2f(locationUniform, triangle1.position[0], triangle1.position[1]);
-        gl.bindVertexArray(rgbTriangleVAO);
-        gl.drawArrays(gl.TRIANGLES, 0, 3);
-
-        gl.uniform1f(sizeUniform, triangle2.size);
-        gl.uniform2f(locationUniform, triangle2.position[0], triangle2.position[1]);
-        gl.bindVertexArray(gradientTriangleVAO);
-        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        shapes.forEach((shape) => {
+            gl.uniform1f(sizeUniform, shape.size);
+            gl.uniform2f(locationUniform, shape.position[0], shape.position[1]);
+            gl.bindVertexArray(shape.vao);
+            gl.drawArrays(gl.TRIANGLES, 0, 3);
+        });
 
         requestAnimationFrame(frame); // Loop calls, each time the drawing is ready.
     };
