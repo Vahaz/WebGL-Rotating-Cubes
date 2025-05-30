@@ -61,3 +61,19 @@ Process:
 4. We replace the static draw calls, uniforms and updates to <code>.forEach()</code> loop.
     1. This allow us to create easily more triangles/objects.
     2. To do this, we create an array based on the class: <code>let shapes: MovingShape[] = [];</code>
+5. Create a small <code>getRandom</code> to get random numbers between min / max.
+6. Added constants at the beginning. (Spawn rate, shape limit, speed, size and time)
+7. Added a <code>timeRemaining</code> and <code>isAlive()</code> in the constructor class <code>MovingShape</code>
+8. Changed the <code>update</code> method to add the <code>timeRemaining</code> and removing <code>dt</code> from it.
+9. Updating <code>timeToNextSpawn = timeToNextSpawn - dt</code>
+10. While <code>timeToNextSpawn</code> is at 0, add SPAWN_RATE to itself.
+    1. This means we need to spawn a shape!
+    2. Get the angle from a random number between 0 and PI*2.
+    3. Get the speed from a random number between min/max speed.
+    4. The position is the middle of the canvas.
+    5. The velocity is trigonometry from sin and cos of the angle times the speed.
+    6. The size is a random from min / max sizes.
+    7. TimeRemaining is retrieve from a random time between min and max life span.
+    8. VAO is a random between 0 and 1 to choose the final color. (half rgb, half gradient)
+    9. shape is the final construct, then it is pushed to the table.
+11. We filter the shapes table and slice from 0 to SHAPE_COUNT_MAX, removing all surplus and old shapes.

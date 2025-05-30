@@ -1,7 +1,22 @@
 /**
- * @description Demo configuration constants
+ * @description Read "README.md", WebGL 3D project.
  * @author Vahaz
  */
+
+/**
+ * - Demo configuration constants
+ * Default:
+ * - SPAWN_RATE = 0.08
+ * - SHAPE_TIME = {MIN: 0.25, MAX: 6}
+ * - SHAPE_SPEED = {MIN: 125, MAX: 350}
+ * - SHAPE_SIZE = {MIN: 2, MAX: 50}
+ * - SHAPE_COUNT_MAX = 250
+ */
+const SPAWN_RATE = 0.08;
+const SHAPE_TIME = {MIN: 0.25, MAX: 6};
+const SHAPE_SPEED = {MIN: 125, MAX: 350};
+const SHAPE_SIZE = {MIN: 2, MAX: 50};
+const SHAPE_COUNT_MAX = 250;
 
 /**
  * Display an error message to the HTML Element with id "error-container" 
@@ -95,6 +110,16 @@ function getContext(canvas: HTMLCanvasElement) {
 }
 
 /**
+ * Get a random number between two numbers.
+ * @param min number
+ * @param max number
+ * @returns random number
+ */
+function getRandomInRange(min: number, max: number) {
+    return Math.random() * (max - min) + min;
+}
+
+/**
  * - [Top-x, Top-y, Left-x, Left-y, Right-x, Right-y]
  * - JS uses 64bit Arrays, and CPU prefer 32bits for half numbers.
  * - "Default" values, but changed by shaders.
@@ -169,7 +194,9 @@ void main() {
  * @constructor position: [number, number]
  * @constructor velocity: [number, number]
  * @constructor size: number
+ * @constructor timeRemaining: number
  * @constructor vao: WebGLVertexArrayObject
+ * @method isAlive - returns: timeRemaining
  * @method update - dt: number
  */
 class MovingShape {
@@ -177,10 +204,15 @@ class MovingShape {
         public position: [number, number],
         public velocity: [number, number],
         public size: number,
+        public timeRemaining: number,
         public vao: WebGLVertexArrayObject) {}
+    isAlive() {
+        return this.timeRemaining > 0;
+    }
     update(dt: number) {
         this.position[0] += this.velocity[0] * dt;
         this.position[1] += this.velocity[1] * dt;
+        this.timeRemaining -= dt;
     }
 }
 
@@ -266,16 +298,12 @@ function main() {
     }
 
     /**
-     * - Setup logical objects in an array to easily loop/create them.
+     * - Create an empty array to store our shapes.
+     * - Set up time to the next shape spawn on the SPAWN_RATE
+     * - Adding Time between last frame / now as "lastFrameTime"
      */
-    let shapes: MovingShape[] = [
-        new MovingShape([200, 100], [50, 5], 100, rgbTriangleVAO),
-        new MovingShape([300, 400], [-50, -5], 50, gradientTriangleVAO)
-    ];
-
-    /**
-     * Time between last frame / now.
-     */
+    let shapes: MovingShape[] = [];
+    let timeToNextSpawn = SPAWN_RATE;
     let lastFrameTime = performance.now();
 
     /**
@@ -295,11 +323,35 @@ function main() {
         lastFrameTime = thisFrameTime;
 
         /**
+         * - Updating timeToNextSpawn = timeToNextSpawn - dt;
+         * - While timeToNextSpawn is at 0, add SPAWN_RATE to itself.
+         */
+        timeToNextSpawn -= dt;
+        while (timeToNextSpawn < 0) {
+            timeToNextSpawn += SPAWN_RATE;
+
+            const angle = getRandomInRange(0, 2 * Math.PI);
+            const speed = getRandomInRange(SHAPE_SPEED.MIN, SHAPE_SPEED.MAX);
+            const position: [number, number] = [canvas.width / 2, canvas.height / 2];
+            const velocity: [number, number] = [
+                Math.sin(angle) * speed,
+                Math.cos(angle) * speed
+            ]
+            const size = getRandomInRange(SHAPE_SIZE.MIN, SHAPE_SIZE.MAX);
+            const timeRemaining = getRandomInRange(SHAPE_TIME.MIN, SHAPE_TIME.MAX);
+            const vao = (Math.random() < 0.5) ? rgbTriangleVAO : gradientTriangleVAO;
+            const shape = new MovingShape(position, velocity, size, timeRemaining, vao);
+            shapes.push(shape);
+        }
+
+        /**
          * Update shapes
          */
         shapes.forEach((shape) => {
             shape.update(dt);
         });
+
+        shapes = shapes.filter((shape) => shape.isAlive()).slice(0, SHAPE_COUNT_MAX);
 
         canvas.width = canvas.clientWidth;
         canvas.height = canvas.clientHeight;
