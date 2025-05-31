@@ -1,4 +1,13 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 /**
  * - Demo configuration constants
  * Default:
@@ -81,6 +90,16 @@ function getContext(canvas) {
 function getRandomInRange(min, max) {
     return Math.random() * (max - min) + min;
 }
+// Get shaders source code.
+function getShaderSource(url) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const response = yield fetch(url);
+        if (!response.ok) {
+            throw new Error(`Error while loading shader code at "${url}": ${response.statusText}`);
+        }
+        return response.text();
+    });
+}
 /**
  * - [Top-x, Top-y, Left-x, Left-y, Right-x, Right-y]
  * - JS uses 64bit Arrays, and CPU prefer 32bits for half numbers.
@@ -99,50 +118,6 @@ const gradientTriangleColors = new Uint8Array([
     246, 206, 29,
     233, 154, 26
 ]);
-/**
- * Shader code, need to be placed here to be compiled and used by the GPU.
- * - " `#version 300 es " : in this order is mandatory!
- * - gl_Position = vec4(x, y, z-sorting [-1;1], w) [built-in]
- *   - x, y and z are devided by w.
- * - Take the canvasSize to devide the finalPosition.
- *   - The finalPosition: vertexPosition * size + location.
- * - to make sure they are in range, we / the finalPos by the canvasSizes
- * - ClipPosition is a %, so we need to make it in range from -1 to 1 by adding (*2 - 1)
- * - We input a color to the fragment color to pass the color along the shaders.
- */
-const vertexShaderCode = `#version 300 es
-precision mediump float;
-
-in vec2 vertexPosition;
-in vec3 vertexColor;
-
-out vec3 fragmentColor;
-
-uniform vec2 canvasSize;
-uniform vec2 location;
-uniform float size;
-
-void main() {
-    fragmentColor = vertexColor;
-    vec2 finalPosition = vertexPosition * size + location;
-    vec2 clipPosition = (finalPosition / canvasSize) * 2.0 - 1.0;
-    gl_Position = vec4(clipPosition, 0.0, 1.0);
-}
-`;
-/**
- * We need to specify here the variables, no built-in inputs.
- * We get the fragmentColor from the vertexShader
- */
-const fragmentShaderCode = `#version 300 es
-precision mediump float;
-
-in vec3 fragmentColor;
-out vec4 outputColor;
-
-void main() {
-    outputColor = vec4(fragmentColor, 1.0);
-}
-`;
 /**
  * - Create a Class "MovingShape" with a position, velocity, size and vao arguments.
  * - The class as a method "update" with dt (delta time) argument.
@@ -168,156 +143,161 @@ class MovingShape {
 }
 // Demo Main function.
 function main() {
-    // Canvas Element.
-    const canvas = document.getElementById("webgl-canvas");
-    if (!canvas || !(canvas instanceof HTMLCanvasElement))
-        throw new Error("Failed to get canvas element.");
-    // Rendering Context.
-    const gl = getContext(canvas);
-    if (!gl) {
-        const isWebGLSupported = !!(document.createElement('canvas')).getContext('webgl');
-        if (isWebGLSupported) {
-            throw new Error("WebGL2 is not supported - try using a different browser.");
+    return __awaiter(this, void 0, void 0, function* () {
+        // Canvas Element.
+        const canvas = document.getElementById("webgl-canvas");
+        if (!canvas || !(canvas instanceof HTMLCanvasElement))
+            throw new Error("Failed to get canvas element.");
+        // Rendering Context.
+        const gl = getContext(canvas);
+        if (!gl) {
+            const isWebGLSupported = !!(document.createElement('canvas')).getContext('webgl');
+            if (isWebGLSupported) {
+                throw new Error("WebGL2 is not supported - try using a different browser.");
+            }
+            else {
+                throw new Error("WebGL is not supported - try using a different browser.");
+            }
         }
-        else {
-            throw new Error("WebGL is not supported - try using a different browser.");
+        // Vertex Buffers.
+        const triangleGeoBuffer = createStaticVertexBuffer(gl, triangleVertices);
+        const rgbGeoBuffer = createStaticVertexBuffer(gl, rgbTriangleColors);
+        const gradientGeoBuffer = createStaticVertexBuffer(gl, gradientTriangleColors);
+        if (!triangleGeoBuffer || !rgbGeoBuffer || !gradientGeoBuffer) {
+            showError("Failed to create vertex buffers.");
+            return;
         }
-    }
-    // Vertex Buffers.
-    const triangleGeoBuffer = createStaticVertexBuffer(gl, triangleVertices);
-    const rgbGeoBuffer = createStaticVertexBuffer(gl, rgbTriangleColors);
-    const gradientGeoBuffer = createStaticVertexBuffer(gl, gradientTriangleColors);
-    if (!triangleGeoBuffer || !rgbGeoBuffer || !gradientGeoBuffer) {
-        showError("Failed to create vertex buffers.");
-        return;
-    }
-    // Vertex Shader.
-    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-    if (vertexShader === null)
-        return showError("No GPU Memory to allocate for Vertex Shader.");
-    gl.shaderSource(vertexShader, vertexShaderCode);
-    gl.compileShader(vertexShader);
-    if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-        const error = gl.getShaderInfoLog(vertexShader);
-        showError(error || "No shader debug log provided.");
-        return;
-    }
-    // Fragment Shader.
-    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-    if (fragmentShader === null) {
-        showError("No GPU Memory to allocate for Fragment Shader.");
-        return;
-    }
-    gl.shaderSource(fragmentShader, fragmentShaderCode);
-    gl.compileShader(fragmentShader);
-    if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-        const error = gl.getShaderInfoLog(fragmentShader);
-        showError(error || "No shader debug log provided.");
-        return;
-    }
-    // Program set up for Uniforms.
-    const program = gl.createProgram();
-    gl.attachShader(program, vertexShader);
-    gl.attachShader(program, fragmentShader);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        const error = gl.getProgramInfoLog(program);
-        showError(error || "No program debug log provided.");
-        return;
-    }
-    // Get the built-in variables from shaders.
-    const vertexPositionAttribute = gl.getAttribLocation(program, 'vertexPosition');
-    const vertexColorAttribute = gl.getAttribLocation(program, 'vertexColor');
-    if (vertexPositionAttribute < 0 || vertexColorAttribute < 0) {
-        showError("Failed to get Attribute Location for vertexPosition.");
-        return;
-    }
-    // Set the Uniforms variables.
-    const locationUniform = gl.getUniformLocation(program, 'location');
-    const sizeUniform = gl.getUniformLocation(program, 'size');
-    const canvasSizeUniform = gl.getUniformLocation(program, 'canvasSize');
-    if (locationUniform === null || sizeUniform === null || canvasSizeUniform === null) {
-        showError(`Uniforms are empty:
+        // Shaders source code in text format.
+        const vertexShaderSource = yield getShaderSource('vertex_shader.vert');
+        const fragmentShaderSource = yield getShaderSource('fragment_shader.frag');
+        // Vertex Shader.
+        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        if (vertexShader === null)
+            return showError("No GPU Memory to allocate for Vertex Shader.");
+        gl.shaderSource(vertexShader, vertexShaderSource);
+        gl.compileShader(vertexShader);
+        if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+            const error = gl.getShaderInfoLog(vertexShader);
+            showError(error || "No shader debug log provided.");
+            return;
+        }
+        // Fragment Shader.
+        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        if (fragmentShader === null) {
+            showError("No GPU Memory to allocate for Fragment Shader.");
+            return;
+        }
+        gl.shaderSource(fragmentShader, fragmentShaderSource);
+        gl.compileShader(fragmentShader);
+        if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+            const error = gl.getShaderInfoLog(fragmentShader);
+            showError(error || "No shader debug log provided.");
+            return;
+        }
+        // Program set up for Uniforms.
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            const error = gl.getProgramInfoLog(program);
+            showError(error || "No program debug log provided.");
+            return;
+        }
+        // Get the built-in variables from shaders.
+        const vertexPositionAttribute = gl.getAttribLocation(program, 'vertexPosition');
+        const vertexColorAttribute = gl.getAttribLocation(program, 'vertexColor');
+        if (vertexPositionAttribute < 0 || vertexColorAttribute < 0) {
+            showError("Failed to get Attribute Location for vertexPosition.");
+            return;
+        }
+        // Set the Uniforms variables.
+        const locationUniform = gl.getUniformLocation(program, 'location');
+        const sizeUniform = gl.getUniformLocation(program, 'size');
+        const canvasSizeUniform = gl.getUniformLocation(program, 'canvasSize');
+        if (locationUniform === null || sizeUniform === null || canvasSizeUniform === null) {
+            showError(`Uniforms are empty:
             - locationUniform=${locationUniform}
             - sizeUniform=${sizeUniform}
             - canvasSizeUniform=${canvasSizeUniform}
             `);
-        return;
-    }
-    // Create VAO Buffers.
-    const rgbTriangleVAO = createTwoBufferVao(gl, triangleGeoBuffer, rgbGeoBuffer, vertexPositionAttribute, vertexColorAttribute);
-    const gradientTriangleVAO = createTwoBufferVao(gl, triangleGeoBuffer, gradientGeoBuffer, vertexPositionAttribute, vertexColorAttribute);
-    if (!rgbTriangleVAO || !gradientTriangleVAO) {
-        showError(`Failes to create VAOs: 
+            return;
+        }
+        // Create VAO Buffers.
+        const rgbTriangleVAO = createTwoBufferVao(gl, triangleGeoBuffer, rgbGeoBuffer, vertexPositionAttribute, vertexColorAttribute);
+        const gradientTriangleVAO = createTwoBufferVao(gl, triangleGeoBuffer, gradientGeoBuffer, vertexPositionAttribute, vertexColorAttribute);
+        if (!rgbTriangleVAO || !gradientTriangleVAO) {
+            showError(`Failes to create VAOs: 
             - rgbTriangle=${!!rgbTriangleVAO}
             - gradientTriangle=${!!gradientTriangleVAO}
             `);
-        return;
-    }
-    /**
-     * - Create an empty array to store our shapes.
-     * - Set up time to the next shape spawn on the SPAWN_RATE
-     * - Adding Time between last frame / now as "lastFrameTime"
-     */
-    let shapes = [];
-    let timeToNextSpawn = SPAWN_RATE;
-    let lastFrameTime = performance.now();
-    /**
-     * Add a function to call it each frame.
-     * - Output Merger: Merge the shaded pixel fragment with the existing out image.
-     * - Rasterizer: Wich pixel are part of the Vertices + Wich part is modified by OpenGL.
-     * - GPU Program: Pair Vertex & Fragment shaders.
-     * - Uniforms: Setting them (can be set anywhere) (size/loc in pixels (px))
-     * - Draw Calls: (w/ Primitive assembly + for loop)
-     */
-    const frame = function () {
-        // Calculate dt with time in seconds between each frame.
-        const thisFrameTime = performance.now();
-        const dt = (thisFrameTime - lastFrameTime) / 1000;
-        lastFrameTime = thisFrameTime;
-        /**
-         * - Updating timeToNextSpawn = timeToNextSpawn - dt;
-         * - While timeToNextSpawn is at 0, add SPAWN_RATE to itself.
-         */
-        timeToNextSpawn -= dt;
-        while (timeToNextSpawn < 0) {
-            timeToNextSpawn += SPAWN_RATE;
-            const angle = getRandomInRange(0, 2 * Math.PI);
-            const speed = getRandomInRange(SHAPE_SPEED.MIN, SHAPE_SPEED.MAX);
-            const position = [canvas.width / 2, canvas.height / 2];
-            const velocity = [
-                Math.sin(angle) * speed,
-                Math.cos(angle) * speed
-            ];
-            const size = getRandomInRange(SHAPE_SIZE.MIN, SHAPE_SIZE.MAX);
-            const timeRemaining = getRandomInRange(SHAPE_TIME.MIN, SHAPE_TIME.MAX);
-            const vao = (Math.random() < 0.5) ? rgbTriangleVAO : gradientTriangleVAO;
-            const shape = new MovingShape(position, velocity, size, timeRemaining, vao);
-            shapes.push(shape);
+            return;
         }
-        // Update Shapes.
-        shapes.forEach((shape) => {
-            shape.update(dt);
-        });
-        shapes = shapes.filter((shape) => shape.isAlive()).slice(0, SHAPE_COUNT_MAX);
-        canvas.width = canvas.clientWidth;
-        canvas.height = canvas.clientHeight;
-        gl.clearColor(0.08, 0.08, 0.08, 1.0);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        gl.viewport(0, 0, canvas.width, canvas.height);
-        gl.useProgram(program);
-        gl.uniform2f(canvasSizeUniform, canvas.width, canvas.height);
-        shapes.forEach((shape) => {
-            gl.uniform1f(sizeUniform, shape.size);
-            gl.uniform2f(locationUniform, shape.position[0], shape.position[1]);
-            gl.bindVertexArray(shape.vao);
-            gl.drawArrays(gl.TRIANGLES, 0, 3);
-        });
-        // Loop calls, each time the drawing is ready.
+        /**
+         * - Create an empty array to store our shapes.
+         * - Set up time to the next shape spawn on the SPAWN_RATE
+         * - Adding Time between last frame / now as "lastFrameTime"
+         */
+        let shapes = [];
+        let timeToNextSpawn = SPAWN_RATE;
+        let lastFrameTime = performance.now();
+        /**
+         * Add a function to call it each frame.
+         * - Output Merger: Merge the shaded pixel fragment with the existing out image.
+         * - Rasterizer: Wich pixel are part of the Vertices + Wich part is modified by OpenGL.
+         * - GPU Program: Pair Vertex & Fragment shaders.
+         * - Uniforms: Setting them (can be set anywhere) (size/loc in pixels (px))
+         * - Draw Calls: (w/ Primitive assembly + for loop)
+         */
+        const frame = function () {
+            // Calculate dt with time in seconds between each frame.
+            const thisFrameTime = performance.now();
+            const dt = (thisFrameTime - lastFrameTime) / 1000;
+            lastFrameTime = thisFrameTime;
+            /**
+             * - Updating timeToNextSpawn = timeToNextSpawn - dt;
+             * - While timeToNextSpawn is at 0, add SPAWN_RATE to itself.
+             */
+            timeToNextSpawn -= dt;
+            while (timeToNextSpawn < 0) {
+                timeToNextSpawn += SPAWN_RATE;
+                const angle = getRandomInRange(0, 2 * Math.PI);
+                const speed = getRandomInRange(SHAPE_SPEED.MIN, SHAPE_SPEED.MAX);
+                const position = [canvas.width / 2, canvas.height / 2];
+                const velocity = [
+                    Math.sin(angle) * speed,
+                    Math.cos(angle) * speed
+                ];
+                const size = getRandomInRange(SHAPE_SIZE.MIN, SHAPE_SIZE.MAX);
+                const timeRemaining = getRandomInRange(SHAPE_TIME.MIN, SHAPE_TIME.MAX);
+                const vao = (Math.random() < 0.5) ? rgbTriangleVAO : gradientTriangleVAO;
+                const shape = new MovingShape(position, velocity, size, timeRemaining, vao);
+                shapes.push(shape);
+            }
+            // Update Shapes.
+            shapes.forEach((shape) => {
+                shape.update(dt);
+            });
+            shapes = shapes.filter((shape) => shape.isAlive()).slice(0, SHAPE_COUNT_MAX);
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            gl.clearColor(0.08, 0.08, 0.08, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            gl.viewport(0, 0, canvas.width, canvas.height);
+            gl.useProgram(program);
+            gl.uniform2f(canvasSizeUniform, canvas.width, canvas.height);
+            shapes.forEach((shape) => {
+                gl.uniform1f(sizeUniform, shape.size);
+                gl.uniform2f(locationUniform, shape.position[0], shape.position[1]);
+                gl.bindVertexArray(shape.vao);
+                gl.drawArrays(gl.TRIANGLES, 0, 3);
+            });
+            // Loop calls, each time the drawing is ready.
+            requestAnimationFrame(frame);
+        };
+        // First call, as soon, as the browser is ready.
         requestAnimationFrame(frame);
-    };
-    // First call, as soon, as the browser is ready.
-    requestAnimationFrame(frame);
+    });
 }
 showError("No Errors! 🌞");
 try {

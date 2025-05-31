@@ -86,6 +86,15 @@ function getRandomInRange(min: number, max: number): number {
     return Math.random() * (max - min) + min;
 }
 
+// Get shaders source code.
+async function getShaderSource(url: string): Promise<string> {
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Error while loading shader code at "${url}": ${response.statusText}`);
+    }
+    return response.text();
+}
+
 /**
  * - [Top-x, Top-y, Left-x, Left-y, Right-x, Right-y]
  * - JS uses 64bit Arrays, and CPU prefer 32bits for half numbers.
@@ -106,52 +115,6 @@ const gradientTriangleColors = new Uint8Array([
     246, 206, 29,
     233, 154, 26
 ]);
-
-/**
- * Shader code, need to be placed here to be compiled and used by the GPU.
- * - " `#version 300 es " : in this order is mandatory!
- * - gl_Position = vec4(x, y, z-sorting [-1;1], w) [built-in]
- *   - x, y and z are devided by w.
- * - Take the canvasSize to devide the finalPosition.
- *   - The finalPosition: vertexPosition * size + location.
- * - to make sure they are in range, we / the finalPos by the canvasSizes
- * - ClipPosition is a %, so we need to make it in range from -1 to 1 by adding (*2 - 1)
- * - We input a color to the fragment color to pass the color along the shaders.
- */
-const vertexShaderCode = `#version 300 es
-precision mediump float;
-
-in vec2 vertexPosition;
-in vec3 vertexColor;
-
-out vec3 fragmentColor;
-
-uniform vec2 canvasSize;
-uniform vec2 location;
-uniform float size;
-
-void main() {
-    fragmentColor = vertexColor;
-    vec2 finalPosition = vertexPosition * size + location;
-    vec2 clipPosition = (finalPosition / canvasSize) * 2.0 - 1.0;
-    gl_Position = vec4(clipPosition, 0.0, 1.0);
-}
-`;
-
-/**
- * We need to specify here the variables, no built-in inputs.
- * We get the fragmentColor from the vertexShader
- */
-const fragmentShaderCode = `#version 300 es
-precision mediump float;
-
-in vec3 fragmentColor;
-out vec4 outputColor;
-
-void main() {
-    outputColor = vec4(fragmentColor, 1.0);
-}
-`;
 
 /**
  * - Create a Class "MovingShape" with a position, velocity, size and vao arguments.
@@ -177,7 +140,7 @@ class MovingShape {
 }
 
 // Demo Main function.
-function main(): void {
+async function main(): Promise<void> {
 
     // Canvas Element.
     const canvas = document.getElementById("webgl-canvas");
@@ -202,11 +165,15 @@ function main(): void {
         showError("Failed to create vertex buffers.");
         return;
     }
+    
+    // Shaders source code in text format.
+    const vertexShaderSource = await getShaderSource('vertex_shader.vert');
+    const fragmentShaderSource = await getShaderSource('fragment_shader.frag');
 
     // Vertex Shader.
     const vertexShader = gl.createShader(gl.VERTEX_SHADER);
     if(vertexShader === null) return showError("No GPU Memory to allocate for Vertex Shader.");
-    gl.shaderSource(vertexShader, vertexShaderCode);
+    gl.shaderSource(vertexShader, vertexShaderSource);
     gl.compileShader(vertexShader);
     if(!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
         const error = gl.getShaderInfoLog(vertexShader);
@@ -220,7 +187,7 @@ function main(): void {
         showError("No GPU Memory to allocate for Fragment Shader.");
         return;
     }
-    gl.shaderSource(fragmentShader, fragmentShaderCode);
+    gl.shaderSource(fragmentShader, fragmentShaderSource);
     gl.compileShader(fragmentShader);
     if(!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
         const error = gl.getShaderInfoLog(fragmentShader);

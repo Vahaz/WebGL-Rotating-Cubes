@@ -19,7 +19,7 @@ Usages:
  - Typescript : *<code>tsc --watch</code> command to compile from .ts to .js*
 
 
-## DEV LOG #0
+## DEV LOG #0 (before to 29/05/2025)
 
 What I Learned :
 1. CPU as hard time working on multi-tasking, why the existance of GPU.
@@ -44,7 +44,7 @@ Process:
 11. Set the Program in use
 12. Set the uniforms data, bind the 8. array and draw the vertices.
 
-## DEV LOG #1
+## DEV LOG #1 (30/05/2025)
 
 [Now, we want and animation](https://youtu.be/lLa6XkVLj0w)
 
@@ -78,8 +78,27 @@ Process:
     9. shape is the final construct, then it is pushed to the table.
 11. We filter the shapes table by all active shapes and slice from 0 to SHAPE_COUNT_MAX.
 
+## DEV LOG #2 (31/05/2025)
+
+1. Added a <code>getShaderSource</code> function with Await/Promise to fetch the source code files and get the response to text (string).
+
 What I Learned :
 - I wanted to add annotations <code>/** @type {string} fruit_name */</code>, but apparently this is for JS Doc not TypeScript annotations. So I switched to this form of annotations <code>const fruit_name: string = "Apple"</code>.
 
 What I did:
 - I changed the annotations and read more about them and how they interact with JS/TS (thanks ThePrimeTime [for this video](https://www.youtube.com/watch?v=xJQ0qXh1-m0))
+- Transfered the shaders code into separate files. Thx to ChatGPT, he helpt me with loading the shaders files (with a simple fetch... that I could found myself, but I though it would have been a better solution...)
+
+Had to move out the documentation on shaders here:
+<code>
+- " #version 300 es " is mandatory (GLSL Embedded Systems 3.0).
+- gl_Position = vec4(x, y, z-sorting [-1;1], w) [built-in]
+  - x, y and z are devided by w.
+- canvasSize is divided by finalPosition = vertexPosition * size + location
+- to make sure they are in range, we divide the finalPos by the canvasSize
+- ClipPosition is a %, so we need to make it in range from -1 to 1 by adding (*2 - 1)
+- We input a color to the fragment color to pass the color along the shaders.
+
+- Fragment Shaders do not have built-in variables.
+- We get the fragmentColor from the vertexShader
+</code>
