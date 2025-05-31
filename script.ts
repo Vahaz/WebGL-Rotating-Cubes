@@ -1,9 +1,4 @@
 /**
- * @description Read "README.md", WebGL 3D project.
- * @author Vahaz
- */
-
-/**
  * - Demo configuration constants
  * Default:
  * - SPAWN_RATE = 0.08
@@ -18,12 +13,8 @@ const SHAPE_SPEED = {MIN: 125, MAX: 350};
 const SHAPE_SIZE = {MIN: 2, MAX: 50};
 const SHAPE_COUNT_MAX = 250;
 
-/**
- * Display an error message to the HTML Element with id "error-container" 
- * @param msg string
- * @returns void
- */
-function showError(msg: string) {
+// Display an error message to the HTML Element with id "error-container".
+function showError(msg: string): void {
     const container = document.getElementById("error-container");
     if(container === null) return console.log("No Element with ID: error-container");
     const element = document.createElement('p');
@@ -36,16 +27,16 @@ function showError(msg: string) {
  * - Create a WebGL Buffer type. (Opaque Handle)
  *   - STATIC_DRAW means we wont update often, but often used.
  *   - ARRAY_BUFFER on the other side indicate the place to store the Array.
- * 1. First, we attach the Buffer to the CPU.
- * 2. Add Array to the Buffer.
- * 3. Clear after use and return the buffer.
- * @param gl WebGL2RenderingContext, rendering context
- * @param data ArrayBuffer, data send to buffer
- * @returns buffer
+ * - First, we attach the Buffer to the CPU.
+ * - Add Array to the Buffer.
+ * - Clear after use and return the buffer.
  */
-function createStaticVertexBuffer(gl: WebGL2RenderingContext, data: ArrayBuffer) {
+function createStaticVertexBuffer(gl: WebGL2RenderingContext, data: ArrayBuffer): WebGLBuffer {
     const buffer = gl.createBuffer();
-    if(!buffer) { showError("Failed to allocate buffer space"); return null }
+    if(!buffer) { 
+        showError("Failed to allocate buffer space"); 
+        return 0; 
+    }
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
@@ -65,20 +56,14 @@ function createStaticVertexBuffer(gl: WebGL2RenderingContext, data: ArrayBuffer)
  *   - IsNormalized (int to floats, for color transform [0, 255] to float [0, 1])
  *   - Stride (Distance between each vertex in the buffer)
  *   - Offset (Number of skiped bytes before reading attributes)
- * @param gl WebGL2RenderingContext, rendering context
- * @param positionBuffer WebGLBuffer for position
- * @param colorBuffer WebGLBuffer for color
- * @param positionAttribute number
- * @param colorAttribute number
- * @returns vao (VertexArray)
  */
 function createTwoBufferVao(
     gl: WebGL2RenderingContext,
     positionBuffer: WebGLBuffer, colorBuffer: WebGLBuffer,
     positionAttribute: number, colorAttribute: number
-) {
+): WebGLVertexArrayObject {
     const vao = gl.createVertexArray();
-    if(!vao) { showError("Failed to allocate VAO buffer."); return null; }
+    if(!vao) { showError("Failed to allocate VAO buffer."); return 0; }
     gl.bindVertexArray(vao);
     gl.enableVertexAttribArray(positionAttribute);
     gl.enableVertexAttribArray(colorAttribute);
@@ -91,31 +76,13 @@ function createTwoBufferVao(
     return vao;
 }
 
-/**
- * Return the WebGL Context from the Canvas Element.
- * @param canvas HTMLCanvasElement
- * @returns gl
- */
-function getContext(canvas: HTMLCanvasElement) {
-    const gl = canvas.getContext('webgl2');
-    if(!gl) {
-        const isWebGLSupported = !!(document.createElement('canvas')).getContext('webgl');
-        if(isWebGLSupported) {
-            throw new Error("WebGL2 is not supported - try using a different browser.");
-        } else {
-            throw new Error("WebGL is not supported - try using a different browser.");
-        }
-    }
-    return gl;
+// Return the WebGL Context from the Canvas Element.
+function getContext(canvas: HTMLCanvasElement): WebGL2RenderingContext | null {
+    return canvas.getContext('webgl2');
 }
 
-/**
- * Get a random number between two numbers.
- * @param min number
- * @param max number
- * @returns random number
- */
-function getRandomInRange(min: number, max: number) {
+// Get a random number between two numbers.
+function getRandomInRange(min: number, max: number): number {
     return Math.random() * (max - min) + min;
 }
 
@@ -191,13 +158,6 @@ void main() {
  * - The class as a method "update" with dt (delta time) argument.
  * - "Update" update the position by adding: position = ((position + velocity) * dt)
  * - Position is expressed in pixels and Velocity by pixels per seconds.
- * @constructor position: [number, number]
- * @constructor velocity: [number, number]
- * @constructor size: number
- * @constructor timeRemaining: number
- * @constructor vao: WebGLVertexArrayObject
- * @method isAlive - returns: timeRemaining
- * @method update - dt: number
  */
 class MovingShape {
     constructor(
@@ -216,85 +176,99 @@ class MovingShape {
     }
 }
 
-/**
- * DEMO Main function
- * @returns void
- */
-function main() {
+// Demo Main function.
+function main(): void {
+
+    // Canvas Element.
     const canvas = document.getElementById("webgl-canvas");
     if(!canvas || !(canvas instanceof HTMLCanvasElement)) throw new Error("Failed to get canvas element.");
     
+    // Rendering Context.
     const gl = getContext(canvas);
+    if(!gl) {
+        const isWebGLSupported: boolean = !!(document.createElement('canvas')).getContext('webgl');
+        if(isWebGLSupported) {
+            throw new Error("WebGL2 is not supported - try using a different browser.");
+        } else {
+            throw new Error("WebGL is not supported - try using a different browser.");
+        }
+    }
 
-    /**
-     * - Create vertex buffers
-     */
+    // Vertex Buffers.
     const triangleGeoBuffer = createStaticVertexBuffer(gl, triangleVertices);
     const rgbGeoBuffer = createStaticVertexBuffer(gl, rgbTriangleColors);
     const gradientGeoBuffer = createStaticVertexBuffer(gl, gradientTriangleColors);
-    if(!triangleGeoBuffer || !rgbGeoBuffer || !gradientGeoBuffer) return showError("Failed to create vertex buffers.");
+    if(!triangleGeoBuffer || !rgbGeoBuffer || !gradientGeoBuffer) {
+        showError("Failed to create vertex buffers.");
+        return;
+    }
 
-    /**
-     * - Setup the vertex shader.
-     */
+    // Vertex Shader.
     const vertexShader = gl.createShader(gl.VERTEX_SHADER);
     if(vertexShader === null) return showError("No GPU Memory to allocate for Vertex Shader.");
     gl.shaderSource(vertexShader, vertexShaderCode);
     gl.compileShader(vertexShader);
     if(!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
         const error = gl.getShaderInfoLog(vertexShader);
-        return showError(error || "No shader debug log provided.");
+        showError(error || "No shader debug log provided.");
+        return;
     }
 
-    /**
-     * - Setup the fragment shader.
-     */
+    // Fragment Shader.
     const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-    if(fragmentShader === null) return showError("No GPU Memory to allocate for Fragment Shader.");
+    if(fragmentShader === null) {
+        showError("No GPU Memory to allocate for Fragment Shader.");
+        return;
+    }
     gl.shaderSource(fragmentShader, fragmentShaderCode);
     gl.compileShader(fragmentShader);
     if(!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
         const error = gl.getShaderInfoLog(fragmentShader);
-        return showError(error || "No shader debug log provided.");
+        showError(error || "No shader debug log provided.");
+        return;
     }
 
-    /**
-     * - Required for uniforms.
-     */
+    // Program set up for Uniforms.
     const program = gl.createProgram();
     gl.attachShader(program, vertexShader);
     gl.attachShader(program, fragmentShader);
     gl.linkProgram(program);
     if(!gl.getProgramParameter(program, gl.LINK_STATUS)) {
         const error = gl.getProgramInfoLog(program);
-        return showError(error || "No program debug log provided.");
+        showError(error || "No program debug log provided.");
+        return;
     }
 
-    /**
-     * - Get the data from "in" in shader code.
-     */
+    // Get the built-in variables from shaders.
     const vertexPositionAttribute = gl.getAttribLocation(program, 'vertexPosition');
     const vertexColorAttribute = gl.getAttribLocation(program, 'vertexColor');
-    if(vertexPositionAttribute < 0 || vertexColorAttribute < 0) return showError("Failed to get Attribute Location for vertexPosition.");
+    if(vertexPositionAttribute < 0 || vertexColorAttribute < 0) {
+        showError("Failed to get Attribute Location for vertexPosition.");
+        return;
+    }
 
-    /**
-     * - We create our Vertex Shader Uniforms variables.
-     */
+    // Set the Uniforms variables.
     const locationUniform = gl.getUniformLocation(program, 'location');
     const sizeUniform = gl.getUniformLocation(program, 'size');
     const canvasSizeUniform = gl.getUniformLocation(program, 'canvasSize');
-    if(locationUniform === null || sizeUniform === null || canvasSizeUniform === null) return showError("Empty Uniforms..");
+    if(locationUniform === null || sizeUniform === null || canvasSizeUniform === null) {
+        showError(`Uniforms are empty:
+            - locationUniform=${locationUniform}
+            - sizeUniform=${sizeUniform}
+            - canvasSizeUniform=${canvasSizeUniform}
+            `);
+        return;
+    }
 
-    /**
-     * - Create buffers vao
-     */
+    // Create VAO Buffers.
     const rgbTriangleVAO = createTwoBufferVao(gl, triangleGeoBuffer, rgbGeoBuffer, vertexPositionAttribute, vertexColorAttribute);
     const gradientTriangleVAO = createTwoBufferVao(gl, triangleGeoBuffer, gradientGeoBuffer, vertexPositionAttribute, vertexColorAttribute);
     if(!rgbTriangleVAO || !gradientTriangleVAO) {
         showError(`Failes to create VAOs: 
             - rgbTriangle=${!!rgbTriangleVAO}
-            - gradientTriangle=${!!gradientTriangleVAO}`)
-        return null;
+            - gradientTriangle=${!!gradientTriangleVAO}
+            `);
+        return;
     }
 
     /**
@@ -308,16 +282,15 @@ function main() {
 
     /**
      * Add a function to call it each frame.
-     * 1. Output Merger: Merge the shaded pixel fragment with the existing out image.
-     * 2. Rasterizer: Wich pixel are part of the Vertices + Wich part is modified by OpenGL.
-     * 3. GPU Program: Pair Vertex & Fragment shaders.
-     * 4. Uniforms: Setting them (can be set anywhere) (size/loc in pixels (px))
-     * 5. Draw Calls: (w/ Primitive assembly + for loop)
+     * - Output Merger: Merge the shaded pixel fragment with the existing out image.
+     * - Rasterizer: Wich pixel are part of the Vertices + Wich part is modified by OpenGL.
+     * - GPU Program: Pair Vertex & Fragment shaders.
+     * - Uniforms: Setting them (can be set anywhere) (size/loc in pixels (px))
+     * - Draw Calls: (w/ Primitive assembly + for loop)
      */
     const frame = function(){
-        /**
-         * Calculate dt with time in seconds between each frame.
-         */
+
+        // Calculate dt with time in seconds between each frame.
         const thisFrameTime = performance.now();
         const dt = (thisFrameTime - lastFrameTime) / 1000;
         lastFrameTime = thisFrameTime;
@@ -344,9 +317,7 @@ function main() {
             shapes.push(shape);
         }
 
-        /**
-         * Update shapes
-         */
+        // Update Shapes.
         shapes.forEach((shape) => {
             shape.update(dt);
         });
@@ -368,14 +339,11 @@ function main() {
             gl.drawArrays(gl.TRIANGLES, 0, 3);
         });
 
-        /**
-         * Loop calls, each time the drawing is ready.
-         */
+        // Loop calls, each time the drawing is ready.
         requestAnimationFrame(frame);
     };
-    /**
-     * First call, as soon, as the browser is ready.
-     */
+
+    // First call, as soon, as the browser is ready.
     requestAnimationFrame(frame);
     
 }

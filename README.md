@@ -76,4 +76,10 @@ Process:
     7. TimeRemaining is retrieve from a random time between min and max life span.
     8. VAO is a random between 0 and 1 to choose the final color. (half rgb, half gradient)
     9. shape is the final construct, then it is pushed to the table.
-11. We filter the shapes table and slice from 0 to SHAPE_COUNT_MAX, removing all surplus and old shapes.
+11. We filter the shapes table by all active shapes and slice from 0 to SHAPE_COUNT_MAX.
+
+What I Learned :
+- I wanted to add annotations <code>/** @type {string} fruit_name */</code>, but apparently this is for JS Doc not TypeScript annotations. So I switched to this form of annotations <code>const fruit_name: string = "Apple"</code>.
+
+What I did:
+- I changed the annotations and read more about them and how they interact with JS/TS (thanks ThePrimeTime [for this video](https://www.youtube.com/watch?v=xJQ0qXh1-m0))
