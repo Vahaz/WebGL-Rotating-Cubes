@@ -13,6 +13,25 @@ const SHAPE_SPEED = {MIN: 125, MAX: 350};
 const SHAPE_SIZE = {MIN: 2, MAX: 50};
 const SHAPE_COUNT_MAX = 250;
 
+/**
+ * - [Top-x, Top-y, Left-x, Left-y, Right-x, Right-y]
+ * - JS uses 64bit Arrays, and CPU prefer 32bits for half numbers.
+ * - Default values, but changed by shaders.
+ */
+const triangleVertices = new Float32Array([0, 1, -1, -1, 1, -1]);
+
+const rgbTriangleColors = new Uint8Array([
+    255, 0, 0,
+    0, 255, 0,
+    0, 0, 255
+]); // Colors
+const gradientTriangleColors = new Uint8Array([
+    229, 47, 15,
+    246, 206, 29,
+    233, 154, 26
+]);  // Colors
+
+
 // Display an error message to the HTML Element with id "error-container".
 function showError(msg: string): void {
     const container = document.getElementById("error-container");
@@ -94,27 +113,6 @@ async function getShaderSource(url: string): Promise<string> {
     }
     return response.text();
 }
-
-/**
- * - [Top-x, Top-y, Left-x, Left-y, Right-x, Right-y]
- * - JS uses 64bit Arrays, and CPU prefer 32bits for half numbers.
- * - "Default" values, but changed by shaders.
- */
-const triangleVertices = new Float32Array([0, 1, -1, -1, 1, -1]);
-
-/** Colors! */
-const rgbTriangleColors = new Uint8Array([
-    255, 0, 0,
-    0, 255, 0,
-    0, 0, 255
-]);
-
-/** Colors! */
-const gradientTriangleColors = new Uint8Array([
-    229, 47, 15,
-    246, 206, 29,
-    233, 154, 26
-]);
 
 /**
  * - Create a Class "MovingShape" with a position, velocity, size and vao arguments.
