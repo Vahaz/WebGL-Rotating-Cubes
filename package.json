@@ -4,10 +4,16 @@
   "license": "UNLICENSED",
   "author": "Vahaz",
   "scripts": {
-    "build": "tsc --watch"
+    "build": "webpack",
+    "watch": "webpack --watch"
   },
   "dependencies": {
     "https-localhost": "^4.7.1",
     "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "ts-loader": "^9.5.2",
+    "webpack": "^5.99.9",
+    "webpack-cli": "^6.0.1"
   }
 }

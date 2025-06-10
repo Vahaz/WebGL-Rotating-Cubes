@@ -61,7 +61,7 @@ Process:
 
 ## DEV LOG #2 (31/05/2025)
 
-1. Added a <code>getShaderSource</code> function with Await/Promise to fetch the source code files and get the response to text (string).
+Added a <code>getShaderSource</code> function with Await/Promise to fetch the source code files and get the response to text (string).
 
 What I Learned :
 - I wanted to add annotations <code>/** @type {string} fruit_name */</code>, but apparently this is for JS Doc not TypeScript annotations. So I switched to this form of annotations <code>const fruit_name: string = "Apple"</code>.
@@ -72,74 +72,72 @@ What I did:
 
 Had to move out the documentation on shaders here:
 
-<code>
-
-- " #version 300 es " is mandatory (GLSL Embedded Systems 3.0).
-- gl_Position = vec4(x, y, z-sorting [-1;1], w) [built-in]
-    - x, y and z are devided by w.
-- canvasSize is divided by finalPosition = vertexPosition * size + location
-    - to make sure they are in range, we divide the finalPos by the canvasSize
-- ClipPosition is a %, so we need to make it in range from -1 to 1 by adding (*2 - 1)
-- We input a color to the fragment color to pass the color along the shaders.
-- Fragment Shaders do not have built-in variables.
-- We get the fragmentColor from the vertexShader.
-
-</code>
+<code>" #version 300 es " is mandatory (GLSL Embedded Systems 3.0).</code>  
+<code>gl_Position = vec4(x, y, z-sorting [-1;1], w) [built-in]</code>  
+<code>x, y and z are devided by w.</code>  
+<code>canvasSize is divided by finalPosition = vertexPosition * size + location</code>  
+<code>to make sure they are in range, we divide the finalPos by the canvasSize</code>  
+<code>ClipPosition is a %, so we need to make it in range from -1 to 1 by adding (*2 - 1)</code>  
+<code>We input a color to the fragment color to pass the color along the shaders.</code>  
+<code>Fragment Shaders do not have built-in variables.</code>  
+<code>We get the fragmentColor from the vertexShader.</code>
 
 ## DEV LOG #3 (05/06/2025)
+
+> IMPORTANT : THE FOLLOWING ARE IN A "COLUMN-MAJOR" ORDER, BUT ROW-MAJOR MATRIX EXIST TOO, BE AWARE ! [SOURCE](https://stackoverflow.com/questions/75042112/multiplication-in-opengl-vertex-shader-using-column-major-matrix-does-not-draw-t?utm_source=chatgpt.com)
+
+> IMPORTANT : IF IT'S "COLUMN-MAJOR" THE TRANSLATION IS IN THE INDICES 3, 7 AND 11. WHILE "ROW-MAJOR" IS IN 12, 13 AND 14.
+
+> row_major = {1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z, 0, 0, 0, 1};
+> column_major = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1};
 
 What I Learned :
 
 ### Matrices: Translation Matrix
-- [
-    - 1 0 0 0
-    - 0 1 0 0
-    - 0 0 1 0
-   -  0 0 0 1
-- ] * [x y z 1]
 
-This equal to:
+[See Tutorial Video by __pikuma__](https://www.youtube.com/watch?v=Do_vEjd6gF0)
 
-- [
-    - x 0 0 tx
-    - 0 y 0 ty
-    - 0 0 z tz
-    - 0 0 0 1
-- ]
+| 1, 0, 0, 0,  
+| 0, 1, 0, 0,  
+| 0, 0, 1, 0,  
+| 0, 0, 0, 1  
+    * [x, y, z, 1]
 
-It is the same as doing:
+This equal to:  
+| x, 0, 0, tx,  
+| 0, y, 0, ty,  
+| 0, 0, z, tz,  
+| 0, 0, 0, 1  
 
-- [
-    - (1 * x) (0 * y) (0 * z) (tx * 1)
-    - (0 * x) (1 * y) (0 * z) (ty * 1)
-    - (0 * x) (0 * y) (1 * z) (tz * 1)
-    - (0 * x) (0 * y) (0 * z) (1 * 1)
-- ]
+It is the same as doing:  
+| (1 * x), (0 * y), (0 * z), (tx * 1),  
+| (0 * x), (1 * y), (0 * z), (ty * 1),  
+| (0 * x), (0 * y), (1 * z), (tz * 1),  
+| (0 * x), (0 * y), (0 * z), (1 * 1)  
 
-This equal to a vec4:
+This equal to a vec4:  
+| x + tx  
+| y + ty  
+| z + tz  
+| 1
 
-- [
-    - x + tx
-    - y + ty
-    - z + tz
-    - 1
-- ]
-
-The "1" is also called "w". 
-The "1" is needed to have a collum to change tx, ty and tz. Without it, we can change x, y or z.
+The "1" is also called "w".  
+The "1" is needed to have a collum to change tx, ty and tz.  
+Without it, we can change x, y or z.
 
 ### Multiply Matrices
 
-[1 2 3 4] * [5 6 7 8]
+[See Tutorial Video by __pikuma__](https://www.youtube.com/watch?v=UG530eh8q4A)
 
-This equal to:
+Matrix multiplication is only possible when the number of columns of the left matrix is equal to the number of rows on the right matrix.
 
-- [
-    - (1 * 5) + (2 * 7) | (1 * 6) + (2 * 8)
-    - (3 * 5) + (4 * 7) | (3 * 6) + (4 * 8)
-- ]
+We start with: [1 2 3 4] * [5 6 7 8]
 
-It result to: [19 22 43 50]
+That equal to:  
+| (1 * 5) + (2 * 7) | (1 * 6) + (2 * 8)  
+| (3 * 5) + (4 * 7) | (3 * 6) + (4 * 8)
+
+And result to: [19 22 43 50]
 
 To transform the calculation done to text: 
 - top left * top left, top right * bottom left.
@@ -147,13 +145,36 @@ To transform the calculation done to text:
 - bottom left * top left, bottom right * bottom left.
 - bottom left * top right, bottom right * bottom right
 
-Also can be:
-
-[a b c d] * [w x y z]
-
-- [
-    - aw + by | ax + bz
-    - cw + dy | cx + dz
-- ]
+Also can be:  
+[a b c d] * [w x y z]  
+| aw + by | ax + bz  
+| cw + dy | cx + dz
 
 See a pattern : 'abcd' 'abcd' on all sides and two times 'ww', 'yy', 'xx' and 'zz'.
+
+![alt text](image.png)
+
+## DEV LOG #4 (06/06/2025 → 09/06/2025)
+
+What I Learned :
+
+### Matrices: Perspective Projection Matrix
+
+[See Tutorial Video by __pikuma__](https://www.youtube.com/watch?v=EqNcqBdrNyI)
+
+1. We need to mutiply each vertex we see by this matrix to have the perspective projection view.
+2. Perspective divide is when we divide x or y by z (depth)
+    1. Closer = Bigger and Far Away = Smaller
+3. The projection matrix is responsible for : 
+    1. Aspect Ratio (adjust x/y based on screen width/height)
+    2. Field of view (adjust x/y based on FOV angle)
+    3. Normalization (adjust x/y/z to sit between -1 and 1)
+4. Aspect Ratio = Height / Width (a = h / w)
+5. tan(FOV/2) equals to half the field of view.
+6. Normalization : z = depth | Lambda (λ) = (zfar / zfar - znear)
+7. Convertion to screen space:
+    1. [x, y, z] → [afx, fy, λz - λznear]
+    2. [x] | af, 0, 0, 0,
+    3. [y] | 0, f, 0, 0,
+    4. [z] | 0, 0, λ, -λ * znear,
+    5. [1] | 0, 0, 1, 0

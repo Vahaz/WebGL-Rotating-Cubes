@@ -1,6 +1,3 @@
-
-[Tutorial by Indigo Code ](https://www.youtube.com/watch?v=y2UsQB3WSvo)
-
 Package:
  - NodeJS v23.11.0
  - https-localhost v4.7.1
@@ -17,3 +14,18 @@ Usages:
  - WebGL GLSL Editor : *edit and compile shaders*
  - WebGl Syntax Hint : *autocomplete*
  - Typescript : *<code>tsc --watch</code> command to compile from .ts to .js*
+
+Tutorial and Learning materials:
+(Really great content, go watch! )
+ - [WebGL Tutorial by Indigo Code ](https://www.youtube.com/watch?v=y2UsQB3WSvo)
+ - [Math related video by Pikuma](https://www.youtube.com/@pikuma)
+ - [Online WebGL Tutorials](https://webglfundamentals.org/webgl/lessons/)
+ - [3D Grapgics Engine tutorial by javidx9](https://www.youtube.com/watch?v=ih20l3pJoeU)
+
+Structure:
+- folder_webgl
+ - dist # Compiled files
+ - docs # Documentation
+ - shaders # Shaders code
+ - src # Source files
+ - index.html # Main web page
