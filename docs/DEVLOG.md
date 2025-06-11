@@ -154,7 +154,7 @@ See a pattern : 'abcd' 'abcd' on all sides and two times 'ww', 'yy', 'xx' and 'z
 
 ![alt text](image.png)
 
-## DEV LOG #4 (06/06/2025 → 09/06/2025)
+## DEV LOG #4 (06/06/2025 → 9/06/2025)
 
 What I Learned :
 
@@ -178,3 +178,48 @@ What I Learned :
     3. [y] | 0, f, 0, 0,
     4. [z] | 0, 0, λ, -λ * znear,
     5. [1] | 0, 0, 1, 0
+
+## DEV LOG #5 (10/06/2025)
+
+Old code that have been deleted, used to have 2 colors and one set of triangle base vertices.  
+<code>[Top-x, Top-y, Left-x, Left-y, Right-x, Right-y]</code>  
+<code>JS uses 64bit Arrays, and CPU prefer 32bits for half numbers.</code>  
+<code>Default values, but changed by shaders.</code>  
+<code>const triangleVertices = new Float32Array([0, 1, -1, -1, 1, -1]);</code>  
+<code>const rgbTriangleColors = new Uint8Array([255, 0, 0, 0, 255, 0, 0, 0, 255]); // Colors</code>  
+<code>const gradientTriangleColors = new Uint8Array([229, 47, 15, 246, 206, 29, 233, 154, 26]); // Colors</code>  
+
+1. Added a "Geometry" file. [(source)](https://www.youtube.com/watch?v=_GSCxcmJ06A)
+2. We have now: class.ts, function.ts, geometry.ts, main.ts and matrice.ts
+3. Changed <code>createVAOBuffer</code> to go from triangle to square usage.
+4. Changed <code>createStaticBuffer</code> to use <code>gl.ELEMENT_ARRAY_BUFFER or gl.ARRAY_BUFFER</code>
+5. Added <code>createProgram</code> to easily create a vertex/fragment shader program.
+6. Added a "Shape" class.
+
+Old code that used to move shapes (triangles) at random angles and speed.  
+<code>Update the time with deltatime: timeToNextSpawn -= dt;</code>  
+We used to get a random angle and speed, a position based on the canvas and velocity based on angle/speed.  
+Their lifespan were random, and colors based on a half-random.   
+<code>const angle = fnc.getRandomInRange(0, 2 * Math.PI);</code>  
+<code>const speed = fnc.getRandomInRange(SHAPE_SPEED.MIN, SHAPE_SPEED.MAX);</code>  
+<code>const position: [number, number] = [canvas.width / 2, canvas.height / 2];</code>  
+<code>const velocity: [number, number] = [Math.sin(angle) * speed, Math.cos(angle) * speed];</code>  
+<code>const size = fnc.getRandomInRange(SHAPE_SIZE.MIN, SHAPE_SIZE.MAX);</code>  
+<code>const timeRemaining = fnc.getRandomInRange(SHAPE_TIME.MIN, SHAPE_TIME.MAX);</code>  
+<code>const vao = (Math.random() < 0.5) ? rgbTriangleVAO : gradientTriangleVAO;</code>  
+<code>const shape = new cls.MovingShape(position, velocity, size, timeRemaining, vao);</code>  
+<code>shapes.push(shape);</code>  
+For each shape we used to filter them by their lifespan and update them.  
+<code>shapes.forEach((shape) => {shape.update(dt);});</code>  
+<code>shapes = shapes.filter((shape) => shape.isAlive()).slice(0, SHAPE_COUNT_MAX);</code>  
+For each shape we used to set their uniform for size, location and position, to bind them, and finnaly draw them.  
+<code>shapes.forEach((shape) => {});</code>  
+<code>gl.uniform1f(sizeUniform, shape.size);</code>  
+<code>gl.uniform2f(locationUniform, shape.position[0], shape.position[1]);</code>  
+<code>gl.bindVertexArray(shape.vao);</code>  
+<code>gl.drawArrays(gl.TRIANGLES, 0, 3);</code>  
+
+I added new classes (Vec3, Quat and Mat4).  
+This will be used to replace gl_matrix by my "own" (thx ChatGPT)
+Thanks to ChatGPT I could understand how this works on make it my own, even if the code is "simple" some part are more complex to me like understanding the normalization and quaternions.
+

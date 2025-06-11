@@ -1,151 +1,69 @@
 import * as fnc from "./function";
 import * as cls from "./class";
-import * as mtx from "./matrice";
+import * as geo from "./geometry";
 
 //
 // MAIN
 //
 
-/**
- * - Demo configuration constants
- * Default:
- * - SPAWN_RATE = 0.08
- * - SHAPE_TIME = {MIN: 0.25, MAX: 6}
- * - SHAPE_SPEED = {MIN: 125, MAX: 350}
- * - SHAPE_SIZE = {MIN: 2, MAX: 50}
- * - SHAPE_COUNT_MAX = 250
- */
-const SPAWN_RATE = 0.08;
-const SHAPE_TIME = {MIN: 0.25, MAX: 6};
-const SHAPE_SPEED = {MIN: 125, MAX: 350};
-const SHAPE_SIZE = {MIN: 2, MAX: 50};
-const SHAPE_COUNT_MAX = 250;
-
-/**
- * - [Top-x, Top-y, Left-x, Left-y, Right-x, Right-y]
- * - JS uses 64bit Arrays, and CPU prefer 32bits for half numbers.
- * - Default values, but changed by shaders.
- */
-const triangleVertices = new Float32Array([0, 1, -1, -1, 1, -1]);
-const rgbTriangleColors = new Uint8Array([
-    255, 0, 0,
-    0, 255, 0,
-    0, 0, 255
-]); // Colors
-const gradientTriangleColors = new Uint8Array([
-    229, 47, 15,
-    246, 206, 29,
-    233, 154, 26
-]); // Colors
-
 // Demo Main fnction.
 async function main(): Promise<void> {
 
-    // Canvas Element.
-    const canvas = document.getElementById("webgl-canvas");
-    if(!canvas || !(canvas instanceof HTMLCanvasElement)) throw new Error("Failed to get canvas element.");
-
-    // Rendering Context.
+    // Canvas Element and Rendering Context.
+    const canvas = document.getElementById("webgl-canvas") as HTMLCanvasElement;
     const gl = fnc.getContext(canvas);
-    if(!gl) {
-        const isWebGLSupported: boolean = !!(document.createElement('canvas')).getContext('webgl');
-        if(isWebGLSupported) {
-            throw new Error("WebGL2 is not supported - try using a different browser.");
-        } else {
-            throw new Error("WebGL is not supported - try using a different browser.");
-        }
-    }
 
-    // Vertex Buffers.
-    const triangleGeoBuffer = fnc.createStaticVertexBuffer(gl, triangleVertices);
-    const rgbGeoBuffer = fnc.createStaticVertexBuffer(gl, rgbTriangleColors);
-    const gradientGeoBuffer = fnc.createStaticVertexBuffer(gl, gradientTriangleColors);
-    if(!triangleGeoBuffer || !rgbGeoBuffer || !gradientGeoBuffer) {
-        fnc.showError("Failed to create vertex buffers.");
+    // Cube and Table vertex and indices buffers.
+    const cubeVertices = fnc.createStaticBuffer(gl, geo.CUBE_VERTICES, false);
+    const cubeIndices = fnc.createStaticBuffer(gl, geo.CUBE_INDICES, true);
+    const tableVertices = fnc.createStaticBuffer(gl, geo.TABLE_VERTICES, false);
+    const tableIndices = fnc.createStaticBuffer(gl, geo.TABLE_INDICES, true);
+
+    if (!cubeVertices || !cubeIndices || !tableVertices || !tableIndices) {
+        fnc.showError(`Failed to create geo: cube: (v=${!!cubeVertices} i=${cubeIndices}), table=(v=${!!tableVertices} i=${!!tableIndices})`);
         return;
     }
 
-    // Shaders source code in text format.
-    const vertexShaderSource = await fnc.getShaderSource('shaders/vertex_shader.vert');
-    const fragmentShaderSource = await fnc.getShaderSource('shaders/fragment_shader.frag');
+    // Shaders source code in string format and link them to a program.
+    const vertexSrc = await fnc.getShaderSource('shaders/vertex_shader.vert');
+    const fragmentSrc = await fnc.getShaderSource('shaders/fragment_shader.frag');
+    const program = fnc.createProgram(gl, vertexSrc, fragmentSrc);
 
-    // Vertex Shader.
-    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-    if(vertexShader === null) return fnc.showError("No GPU Memory to allocate for Vertex Shader.");
-    gl.shaderSource(vertexShader, vertexShaderSource);
-    gl.compileShader(vertexShader);
-    if(!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-        const error = gl.getShaderInfoLog(vertexShader);
-        fnc.showError(error || "No shader debug log provided.");
-        return;
-    }
+    // Get the built-in variables from shaders, and get the uniforms variable set by the user.
+    const positionAttribute = gl.getAttribLocation(program, 'vertexPosition');
+    const colorAttribute = gl.getAttribLocation(program, 'vertexColor');
+    const matWorldUniform = gl.getUniformLocation(program, 'matWorld') as WebGLUniformLocation;
+    const matViewProjUniform = gl.getUniformLocation(program, 'matView') as WebGLUniformLocation;
 
-    // Fragment Shader.
-    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-    if(fragmentShader === null) {
-        fnc.showError("No GPU Memory to allocate for Fragment Shader.");
-        return;
-    }
-    gl.shaderSource(fragmentShader, fragmentShaderSource);
-    gl.compileShader(fragmentShader);
-    if(!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-        const error = gl.getShaderInfoLog(fragmentShader);
-        fnc.showError(error || "No shader debug log provided.");
-        return;
-    }
-
-    // Program set up for Uniforms.
-    const program = gl.createProgram();
-    gl.attachShader(program, vertexShader);
-    gl.attachShader(program, fragmentShader);
-    gl.linkProgram(program);
-    if(!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        const error = gl.getProgramInfoLog(program);
-        fnc.showError(error || "No program debug log provided.");
-        return;
-    }
-
-    // Get the built-in variables from shaders.
-    const vertexPositionAttribute = gl.getAttribLocation(program, 'vertexPosition');
-    const vertexColorAttribute = gl.getAttribLocation(program, 'vertexColor');
-    if(vertexPositionAttribute < 0 || vertexColorAttribute < 0) {
+    if(positionAttribute < 0 || colorAttribute < 0) {
         fnc.showError("Failed to get Attribute Location for vertexPosition.");
         return;
     }
 
-    // Set the Uniforms variables.
-    const locationUniform = gl.getUniformLocation(program, 'location');
-    const sizeUniform = gl.getUniformLocation(program, 'size');
-    const canvasSizeUniform = gl.getUniformLocation(program, 'canvasSize');
-    if(locationUniform === null || sizeUniform === null || canvasSizeUniform === null) {
-        fnc.showError(`Uniforms are empty:
-            - locationUniform=${locationUniform}
-            - sizeUniform=${sizeUniform}
-            - canvasSizeUniform=${canvasSizeUniform}
-            `);
+    // Create vertex array object buffers.
+    const cubeVAO = fnc.createVAOBuffer(gl, cubeVertices, cubeIndices, positionAttribute, colorAttribute);
+    const tableVAO = fnc.createVAOBuffer(gl, tableVertices, tableIndices, positionAttribute, colorAttribute);
+    if(!cubeVAO || !tableVAO) {
+        fnc.showError(`Failes to create VAOs: cube=${!!cubeVAO}, table=${!!tableVAO}`);
         return;
     }
 
-    // Create VAO Buffers.
-    const rgbTriangleVAO = fnc.createTwoBufferVao(gl, triangleGeoBuffer, rgbGeoBuffer, vertexPositionAttribute, vertexColorAttribute);
-    const gradientTriangleVAO = fnc.createTwoBufferVao(gl, triangleGeoBuffer, gradientGeoBuffer, vertexPositionAttribute, vertexColorAttribute);
-    if(!rgbTriangleVAO || !gradientTriangleVAO) {
-        fnc.showError(`Failes to create VAOs: 
-            - rgbTriangle=${!!rgbTriangleVAO}
-            - gradientTriangle=${!!gradientTriangleVAO}
-            `);
-        return;
-    }
+    // Create an empty array to store our cubes.
+    const UP_VEC = new cls.Vec3(0, 1, 0);
+    const cubes = [
+        new cls.Shape(new cls.Vec3(0, 0, 0), 1, UP_VEC, 0, tableVAO, geo.TABLE_INDICES.length),   // Ground
+        new cls.Shape(new cls.Vec3(0, 0.4, 0), 0.4, UP_VEC, 0, cubeVAO, geo.CUBE_INDICES.length), // Center
+        new cls.Shape(new cls.Vec3(1, 0.05, 1), 0.05, UP_VEC, fnc.toRadian(20), cubeVAO, geo.CUBE_INDICES.length),
+        new cls.Shape(new cls.Vec3(1, 0.1, -1), 0.1, UP_VEC, fnc.toRadian(40), cubeVAO, geo.CUBE_INDICES.length),
+        new cls.Shape(new cls.Vec3(-1, 0.15, 1), 0.15, UP_VEC, fnc.toRadian(60), cubeVAO, geo.CUBE_INDICES.length),
+        new cls.Shape(new cls.Vec3(-1, 0.2, -1), 0.2, UP_VEC, fnc.toRadian(80), cubeVAO, geo.CUBE_INDICES.length),
+    ];
 
-    /**
-     * - Create an empty array to store our shapes.
-     * - Set up time to the next shape spawn on the SPAWN_RATE
-     * - Adding Time between last frame / now as "lastFrameTime"
-     */
-    let shapes: cls.MovingShape[] = [];
-    let timeToNextSpawn = SPAWN_RATE;
-    let lastFrameTime = performance.now();
+    const matView = new cls.Mat4();
+    const matProj = new cls.Mat4();
+    let matViewProj = new cls.Mat4();
 
+    let cameraAngle = 0;
     /**
      * Add a fnction to call it each frame.
      * - Output Merger: Merge the shaded pixel fragment with the existing out image.
@@ -154,56 +72,50 @@ async function main(): Promise<void> {
      * - Uniforms: Setting them (can be set anywhere) (size/loc in pixels (px))
      * - Draw Calls: (w/ Primitive assembly + for loop)
      */
+    let lastFrameTime = performance.now();
     const frame = function(){
         // Calculate dt with time in seconds between each frame.
         const thisFrameTime = performance.now();
         const dt = (thisFrameTime - lastFrameTime) / 1000;
         lastFrameTime = thisFrameTime;
 
-        /**
-         * - Updating timeToNextSpawn = timeToNextSpawn - dt;
-         * - While timeToNextSpawn is at 0, add SPAWN_RATE to itself.
-         */
-        timeToNextSpawn -= dt;
-        while (timeToNextSpawn < 0) {
-            timeToNextSpawn += SPAWN_RATE;
+        // Update
+        cameraAngle += dt * fnc.toRadian(10);
 
-            const angle = fnc.getRandomInRange(0, 2 * Math.PI);
-            const speed = fnc.getRandomInRange(SHAPE_SPEED.MIN, SHAPE_SPEED.MAX);
-            const position: [number, number] = [canvas.width / 2, canvas.height / 2];
-            const velocity: [number, number] = [
-                Math.sin(angle) * speed,
-                Math.cos(angle) * speed
-            ];
-            const size = fnc.getRandomInRange(SHAPE_SIZE.MIN, SHAPE_SIZE.MAX);
-            const timeRemaining = fnc.getRandomInRange(SHAPE_TIME.MIN, SHAPE_TIME.MAX);
-            const vao = (Math.random() < 0.5) ? rgbTriangleVAO : gradientTriangleVAO;
-            const shape = new cls.MovingShape(position, velocity, size, timeRemaining, vao);
-            shapes.push(shape);
-        }
+        const cameraX = 3 * Math.sin(cameraAngle);
+        const cameraZ = 3 * Math.cos(cameraAngle);
 
-        // Update Shapes.
-        shapes.forEach((shape) => {
-            shape.update(dt);
-        });
+        matView.setLookAt(
+            new cls.Vec3(cameraX, 1, cameraZ),
+            new cls.Vec3(0, 0, 0),
+            new cls.Vec3(0, 1, 0)
+        );
+        matProj.setPerspective(
+            fnc.toRadian(80), // FOV
+            canvas.width / canvas.height, // ASPECT RATIO
+            0.1, 100.0 // Z-NEAR / Z-FAR
+        );
 
-        shapes = shapes.filter((shape) => shape.isAlive()).slice(0, SHAPE_COUNT_MAX);
+        // in GLM: matViewProj = matProj * matView
+        matViewProj = matProj.multiply(matView);
 
-        canvas.width = canvas.clientWidth;
-        canvas.height = canvas.clientHeight;
-        gl.clearColor(0.08, 0.08, 0.08, 1.0);
+        //
+        // Render
+        canvas.width = canvas.clientWidth * devicePixelRatio;
+        canvas.height = canvas.clientHeight * devicePixelRatio;
+
+        gl.clearColor(0.02, 0.02, 0.02, 1);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.enable(gl.DEPTH_TEST);
+        gl.enable(gl.CULL_FACE);
+        gl.cullFace(gl.BACK);
+        gl.frontFace(gl.CCW);
         gl.viewport(0, 0, canvas.width, canvas.height);
+
         gl.useProgram(program);
-        gl.uniform2f(canvasSizeUniform, canvas.width, canvas.height);
+        gl.uniformMatrix4fv(matViewProjUniform, false, matViewProj.m);
 
-        shapes.forEach((shape) => {
-            gl.uniform1f(sizeUniform, shape.size);
-            gl.uniform2f(locationUniform, shape.position[0], shape.position[1]);
-            gl.bindVertexArray(shape.vao);
-            gl.drawArrays(gl.TRIANGLES, 0, 3);
-        });
-
+        cubes.forEach((cube) => cube.draw(gl, matWorldUniform));
         // Loop calls, each time the drawing is ready.
         requestAnimationFrame(frame);
     };
