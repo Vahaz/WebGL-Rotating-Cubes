@@ -25,18 +25,21 @@ async function main(): Promise<void> {
     }
 
     // Shaders source code in string format and link them to a program.
-    const vertexSrc = await fnc.getShaderSource('shaders/vertex_shader.vert');
-    const fragmentSrc = await fnc.getShaderSource('shaders/fragment_shader.frag');
+    const vertexSrc = await fnc.getShaderSource('./shaders/vertex_shader.vert');
+    const fragmentSrc = await fnc.getShaderSource('./shaders/fragment_shader.frag');
     const program = fnc.createProgram(gl, vertexSrc, fragmentSrc);
 
     // Get the built-in variables from shaders, and get the uniforms variable set by the user.
     const positionAttribute = gl.getAttribLocation(program, 'vertexPosition');
     const colorAttribute = gl.getAttribLocation(program, 'vertexColor');
     const matWorldUniform = gl.getUniformLocation(program, 'matWorld') as WebGLUniformLocation;
-    const matViewProjUniform = gl.getUniformLocation(program, 'matView') as WebGLUniformLocation;
+    const matViewProjUniform = gl.getUniformLocation(program, 'matViewProj') as WebGLUniformLocation;
 
-    if(positionAttribute < 0 || colorAttribute < 0) {
-        fnc.showError("Failed to get Attribute Location for vertexPosition.");
+    if(positionAttribute < 0 || colorAttribute < 0 || !matWorldUniform || !matViewProjUniform) {
+        fnc.showError(`Failed to get attribs/uniforms: ` +
+             `pos=${positionAttribute}, color=${colorAttribute} ` +
+            `matWorld=${!!matWorldUniform} matViewProj=${!!matViewProjUniform}`
+        );
         return;
     }
 
@@ -49,19 +52,19 @@ async function main(): Promise<void> {
     }
 
     // Create an empty array to store our cubes.
-    const UP_VEC = new cls.Vec3(0, 1, 0);
+    const UP_VEC = new cls.vec3(0, 1, 0);
     const cubes = [
-        new cls.Shape(new cls.Vec3(0, 0, 0), 1, UP_VEC, 0, tableVAO, geo.TABLE_INDICES.length),   // Ground
-        new cls.Shape(new cls.Vec3(0, 0.4, 0), 0.4, UP_VEC, 0, cubeVAO, geo.CUBE_INDICES.length), // Center
-        new cls.Shape(new cls.Vec3(1, 0.05, 1), 0.05, UP_VEC, fnc.toRadian(20), cubeVAO, geo.CUBE_INDICES.length),
-        new cls.Shape(new cls.Vec3(1, 0.1, -1), 0.1, UP_VEC, fnc.toRadian(40), cubeVAO, geo.CUBE_INDICES.length),
-        new cls.Shape(new cls.Vec3(-1, 0.15, 1), 0.15, UP_VEC, fnc.toRadian(60), cubeVAO, geo.CUBE_INDICES.length),
-        new cls.Shape(new cls.Vec3(-1, 0.2, -1), 0.2, UP_VEC, fnc.toRadian(80), cubeVAO, geo.CUBE_INDICES.length),
+        new cls.Shape(new cls.vec3(0, 0, 0), 1, UP_VEC, 0, tableVAO, geo.TABLE_INDICES.length),   // Ground
+        new cls.Shape(new cls.vec3(0, 0.4, 0), 0.4, UP_VEC, 0, cubeVAO, geo.CUBE_INDICES.length), // Center
+        new cls.Shape(new cls.vec3(1, 0.05, 1), 0.05, UP_VEC, fnc.toRadian(20), cubeVAO, geo.CUBE_INDICES.length),
+        new cls.Shape(new cls.vec3(1, 0.1, -1), 0.1, UP_VEC, fnc.toRadian(40), cubeVAO, geo.CUBE_INDICES.length),
+        new cls.Shape(new cls.vec3(-1, 0.15, 1), 0.15, UP_VEC, fnc.toRadian(60), cubeVAO, geo.CUBE_INDICES.length),
+        new cls.Shape(new cls.vec3(-1, 0.2, -1), 0.2, UP_VEC, fnc.toRadian(80), cubeVAO, geo.CUBE_INDICES.length),
     ];
 
-    const matView = new cls.Mat4();
-    const matProj = new cls.Mat4();
-    let matViewProj = new cls.Mat4();
+    let matView = new cls.mat4();
+    let matProj = new cls.mat4();
+    let matViewProj = new cls.mat4();
 
     let cameraAngle = 0;
     /**
@@ -86,9 +89,9 @@ async function main(): Promise<void> {
         const cameraZ = 3 * Math.cos(cameraAngle);
 
         matView.setLookAt(
-            new cls.Vec3(cameraX, 1, cameraZ),
-            new cls.Vec3(0, 0, 0),
-            new cls.Vec3(0, 1, 0)
+            new cls.vec3(cameraX, 1, cameraZ),
+            new cls.vec3(0, 0, 0),
+            new cls.vec3(0, 1, 0)
         );
         matProj.setPerspective(
             fnc.toRadian(80), // FOV
@@ -99,7 +102,6 @@ async function main(): Promise<void> {
         // in GLM: matViewProj = matProj * matView
         matViewProj = matProj.multiply(matView);
 
-        //
         // Render
         canvas.width = canvas.clientWidth * devicePixelRatio;
         canvas.height = canvas.clientHeight * devicePixelRatio;
@@ -119,7 +121,6 @@ async function main(): Promise<void> {
         // Loop calls, each time the drawing is ready.
         requestAnimationFrame(frame);
     };
-
     // First call, as soon, as the browser is ready.
     requestAnimationFrame(frame);
 }

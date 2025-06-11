@@ -219,7 +219,17 @@ For each shape we used to set their uniform for size, location and position, to 
 <code>gl.bindVertexArray(shape.vao);</code>  
 <code>gl.drawArrays(gl.TRIANGLES, 0, 3);</code>  
 
-I added new classes (Vec3, Quat and Mat4).  
-This will be used to replace gl_matrix by my "own" (thx ChatGPT)
+I added new classes (Vec3, Quat and Mat4).   
+This will be used to replace gl_matrix by my "own" (thx ChatGPT)  
 Thanks to ChatGPT I could understand how this works on make it my own, even if the code is "simple" some part are more complex to me like understanding the normalization and quaternions.
 
+I removed the old "Moving Shape" class.  
+To construct it, you needeed a position, velocity, size, timeRemaining and a VAO.  
+<code>Create a Class "MovingShape" with a position, velocity, size and vao arguments.</code>  
+<code>The class as a method "update" with dt (delta time) argument.</code>  
+<code>"Update" update the position by adding: position = ((position + velocity) * dt)</code>  
+<code>Position is expressed in pixels and Velocity by pixels per seconds.</code>  
+
+## DEV LOG #5 (11/06/2025)
+
+IT IS WORKING! IT IS ALIVE! 

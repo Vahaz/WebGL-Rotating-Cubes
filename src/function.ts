@@ -12,11 +12,6 @@ export function showError(msg: string): void {
     console.log(msg);
 }
 
-// Get a random number between two numbers.
-export function getRandomInRange(min: number, max: number): number {
-    return Math.random() * (max - min) + min;
-}
-
 // Get shaders source code.
 export async function getShaderSource(url: string): Promise<string> {
     const response = await fetch(url);
@@ -54,7 +49,6 @@ export function createStaticBuffer(gl: WebGL2RenderingContext, data: ArrayBuffer
     gl.bindBuffer(type, buffer);
     gl.bufferData(type, data, gl.STATIC_DRAW);
     gl.bindBuffer(type, null);
-
     return buffer
 }
 
@@ -85,7 +79,7 @@ export function createVAOBuffer(
     // Interleaved format: (x, y, z, r, g, b) (all f32)
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.vertexAttribPointer(posAttrib, 3, gl.FLOAT, false, 6 * Float32Array.BYTES_PER_ELEMENT, 0);
-    gl.vertexAttribPointer(colorAttrib, 3, gl.UNSIGNED_BYTE, false, 6 * Float32Array.BYTES_PER_ELEMENT, 3 * Float32Array.BYTES_PER_ELEMENT);
+    gl.vertexAttribPointer(colorAttrib, 3, gl.FLOAT, false, 6 * Float32Array.BYTES_PER_ELEMENT, 3 * Float32Array.BYTES_PER_ELEMENT);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bindVertexArray(null);
@@ -102,7 +96,6 @@ export function createProgram(
     const vertexShader = gl.createShader(gl.VERTEX_SHADER) as WebGLShader;
     const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER) as WebGLShader;
     const program = gl.createProgram();
-
 
     gl.shaderSource(vertexShader, vertexShaderSrc);
     gl.compileShader(vertexShader);
@@ -129,6 +122,5 @@ export function createProgram(
         showError(error || "No program debug log provided.");
         return 0;
     }
-
     return program;
 }

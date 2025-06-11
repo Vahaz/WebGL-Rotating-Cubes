@@ -2,38 +2,15 @@
 // CLASS
 //
 
-/**
- * - Create a Class "MovingShape" with a position, velocity, size and vao arguments.
- * - The class as a method "update" with dt (delta time) argument.
- * - "Update" update the position by adding: position = ((position + velocity) * dt)
- * - Position is expressed in pixels and Velocity by pixels per seconds.
- */
-export class MovingShape {
-    constructor(
-        public position: [number, number],
-        public velocity: [number, number],
-        public size: number,
-        public timeRemaining: number,
-        public vao: WebGLVertexArrayObject) {}
-    isAlive() {
-        return this.timeRemaining > 0;
-    }
-    update(dt: number) {
-        this.position[0] += this.velocity[0] * dt;
-        this.position[1] += this.velocity[1] * dt;
-        this.timeRemaining -= dt;
-    }
-}
-
 export class Shape {
-  private matWorld = new Mat4();
-  private scaleVec = new Vec3();
-  private rotation = new Quat();
+  private matWorld = new mat4();
+  private scaleVec = new vec3();
+  private rotation = new quat();
 
   constructor(
-    private pos: Vec3,
+    private pos: vec3,
     private scale: number,
-    private rotationAxis: Vec3,
+    private rotationAxis: vec3,
     private rotationAngle: number,
     public readonly vao: WebGLVertexArrayObject,
     public readonly numIndices: number) { }
@@ -52,33 +29,33 @@ export class Shape {
     
 }
 
-export class Vec3 {
+export class vec3 {
     constructor(public x: number = 0.0, public y: number = 0.0, public z: number = 0.0) {}
 
-    add(v: Vec3): Vec3 { return new Vec3(this.x + v.x, this.y + v.y, this.z + v.z) }
-    subtract(v: Vec3): Vec3 { return new Vec3(this.x - v.x, this.y - v.y, this.z - v.z) }
-    multiply(v: Vec3): Vec3 { return new Vec3(this.x * v.x, this.y * v.y, this.z * v.z) }
+    add(v: vec3): vec3 { return new vec3(this.x + v.x, this.y + v.y, this.z + v.z) }
+    subtract(v: vec3): vec3 { return new vec3(this.x - v.x, this.y - v.y, this.z - v.z) }
+    multiply(v: vec3): vec3 { return new vec3(this.x * v.x, this.y * v.y, this.z * v.z) }
     set(x: number, y: number, z: number): this {
         this.x = x;
         this.y = y;
         this.z = z;
         return this;
     }
-    normalize(): Vec3 {
+    normalize(): vec3 {
         const len = Math.hypot(this.x, this.y, this.z);
-        return len > 0 ? new Vec3(this.x / len, this.y / len, this.z / len) : new Vec3();
+        return len > 0 ? new vec3(this.x / len, this.y / len, this.z / len) : new vec3();
     }
-    cross(v: Vec3): Vec3 {
-        return new Vec3(
+    cross(v: vec3): vec3 {
+        return new vec3(
             this.y * v.z - this.z * v.y,
             this.z * v.x - this.x * v.z,
             this.x * v.y - this.y * v.x
         );
     }
-    dot(v: Vec3): number { return this.x * v.x + this.y * v.y + this.z * v.z }
+    dot(v: vec3): number { return this.x * v.x + this.y * v.y + this.z * v.z }
 }
 
-export class Quat {
+export class quat {
     constructor(
         public x: number = 0,
         public y: number = 0,
@@ -86,7 +63,7 @@ export class Quat {
         public w: number = 1
     ) {}
 
-    setAxisAngle(axis: Vec3, angle: number): this {
+    setAxisAngle(axis: vec3, angle: number): this {
         const norm = axis.normalize();
         const half = angle / 2;
         const s = Math.sin(half);
@@ -100,7 +77,7 @@ export class Quat {
     }
 }
 
-export class Mat4 {
+export class mat4 {
     public m: Float32Array;
 
     constructor() {
@@ -119,7 +96,7 @@ export class Mat4 {
         return this;
     }
 
-    copyFrom(mat: Mat4): this {
+    copyFrom(mat: mat4): this {
         this.m.set(mat.m);
         return this;
     }
@@ -131,7 +108,7 @@ export class Mat4 {
      *  0,  0,  z, 0
      * tx, ty, tz, 1
      */
-    multiply(other: Mat4): this {
+    multiply(other: mat4): this {
         const a = this.m, b = other.m;
         const out = new Float32Array(16);
 
@@ -187,7 +164,7 @@ export class Mat4 {
         return this;
     }
 
-    setLookAt(eye: Vec3, center: Vec3, up: Vec3): this {
+    setLookAt(eye: vec3, center: vec3, up: vec3): this {
         const z = eye.subtract(center).normalize();
         const x = up.cross(z).normalize();
         const y = z.cross(x);
@@ -216,7 +193,7 @@ export class Mat4 {
         return this;
     }
 
-    setFromRotationTranslationScale(q: Quat, v: Vec3, s: Vec3): this {
+    setFromRotationTranslationScale(q: quat, v: vec3, s: vec3): this {
         const x = q.x, y = q.y, z = q.z, w = q.w;
         const sx = s.x, sy = s.y, sz = s.z;
 
