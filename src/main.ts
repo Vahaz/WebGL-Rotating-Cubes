@@ -36,7 +36,7 @@ async function main(): Promise<void> {
     const matViewProjUniform = gl.getUniformLocation(program, 'matViewProj') as WebGLUniformLocation;
 
     if(positionAttribute < 0 || colorAttribute < 0 || !matWorldUniform || !matViewProjUniform) {
-        fnc.showError(`Failed to get attribs/uniforms: ` +
+        fnc.showError(`Failed to get attribs/uniforms (Max: ${gl.getParameter(gl.MAX_VERTEX_ATTRIBS)}): ` +
              `pos=${positionAttribute}, color=${colorAttribute} ` +
             `matWorld=${!!matWorldUniform} matViewProj=${!!matViewProjUniform}`
         );

@@ -152,7 +152,7 @@ Also can be:
 
 See a pattern : 'abcd' 'abcd' on all sides and two times 'ww', 'yy', 'xx' and 'zz'.
 
-![alt text](image.png)
+![matrices drawing](matrice.png)
 
 ## DEV LOG #4 (06/06/2025 → 9/06/2025)
 
@@ -230,6 +230,36 @@ To construct it, you needeed a position, velocity, size, timeRemaining and a VAO
 <code>"Update" update the position by adding: position = ((position + velocity) * dt)</code>  
 <code>Position is expressed in pixels and Velocity by pixels per seconds.</code>  
 
-## DEV LOG #5 (11/06/2025)
+## DEV LOG #5 (11/06/2025 → 15/06/2025)
 
-IT IS WORKING! IT IS ALIVE! 
+IT IS WORKING! IT IS ALIVE! [NEW TUTORIALS !](https://www.youtube.com/playlist?list=PLPbmjY2NVO_X1U1JzLxLDdRn4NmtxyQQo)  
+
+What I learned:  
+- WeblGL Program Struct:
+    1. Create a Program.
+    2. Create Vertex and Fragment Shaders.
+    3. Set the source code for the shaders (.glsl or .vert .frag files)
+    4. Compile the shaders.
+    5. Attach them to the program.
+    6. Link the program.
+- Uniforms:
+    - Available in vertex/fragment shader.
+    - Cannot be changed during a draw call.
+    - Are set w/ "uniform" in shaders and retrieve with "getUniformLocation(program, 'uniform_name')" in js.
+    - Are global variables defined in shaders and set with js.
+    - "gl.uniform4fv(loc, [1, 2, 3, 4])" to set a vec4 with an array
+    - while "gl.uniform4f(loc, 1, 2, 3, 4)" set a vec4 with args.
+    - can be usefull to set colors array. ![uniform screenshot from youtube](uniform.png)
+- Attributes:
+    - Maximum 16 per program, some platforms allow more at risk. (gl.getParameter(gl.MAX_VERTEX_ATTRIBS))
+    - Vertex attributes are: coordinates, color, transparency, texture mapping, and any float/matrices, etc.
+    - Are only available in vextex shader (in) and need to be sent to fragment shader with out.
+    - Can change for every vertex in the buffer.
+    - Are bind with : gl.bindAttribLocation(program, value, 'attrib_name') in js before program is linked w/ shaders.
+    - Also bind in shader with: layout(location = 0) in vec2 aAttributeName (static version)
+    - Are float / made of floats in shaders while in js are chain of values with 8/16 bits integers.
+    - gl.vertexAttribPointer() is used to tell opengl how to read thoses values from js.
+    - attributes can be used to draw multiples objects on screen with the same bufferData bind in the buffer after enabling the vertex attribute array.
+    ![attributes screenshot from youtube](attribute.png)
+- Vertex:
+    - 65,536 vertices is theorically possible, but at risk.
