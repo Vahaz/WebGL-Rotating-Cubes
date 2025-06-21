@@ -4,7 +4,7 @@
 > [!NOTE]  
 > This project was supposed to remain private, but why not show it to the rest of the world in the end? Nothing fancy here, I just write what I followed in the tutorials in my own way.
 
-Package:
+### Package:
  - NodeJS v23.11.0
  - https-localhost v4.7.1
  - typescript v5.8.3
@@ -12,20 +12,20 @@ Package:
  - webpack-cli v6.0.1
  - ts-loader v9.5.2
 
-Extensions:
+### Extensions:
  - glsl-canvas v0.2.15 by __circledev__ (*Live WebGL preview of GLSL shaders*)
  - Live Preview v0.4.15 by __Microsoft__ (*Hosts a local server in your workspace for you to preview your webpages on.*)
  - WebGL GLSL Editor v1.3.8 by __Rácz Zalán__ (*Language support for WebGL GLSL shaders.*)
  - WebGL Syntax Hint v0.0.2 by __nieyuyao__ (*webgl plugin syntax*)
 
-Usages:
+### Usages:
  - glsl-canvas : *"Show glslCanvas" command*
  - WebGL GLSL Editor : *edit and compile shaders*
  - WebGl Syntax Hint : *autocomplete*
  - Typescript : *<code>tsc --watch</code> command to compile from .ts to .js*
  - Webpack : *<code>webpack --watch</code> command to compile from all .ts to a single .js*
 
-Tutorial and Learning materials:  
+### Tutorial and Learning materials:  
 (Really great content, go watch!)  
  - [WebGL Tutorial by Indigo Code ](https://www.youtube.com/watch?v=y2UsQB3WSvo)
  - [Math related video by Pikuma](https://www.youtube.com/@pikuma)
@@ -33,7 +33,7 @@ Tutorial and Learning materials:
  - [3D Grapgics Engine tutorial by javidx9](https://www.youtube.com/watch?v=ih20l3pJoeU)
  - [WebGL 2.0 tutorial by Andrew Adamson](https://www.youtube.com/playlist?list=PLPbmjY2NVO_X1U1JzLxLDdRn4NmtxyQQo)
 
-Structure:
+### Structure:
 - folder_webgl
    - [dist](/dist/) # Compiled files
       - [main.js](/dist/main.js) # Compiled file containing all .ts files.
@@ -57,3 +57,7 @@ Structure:
    - [package.json](/package.json) # For NodeJS
    - [tsconfig.json](/tsconfig.json) # For Typescript
    - [webpack.config.js](/webpack.config.js) # For Webpack
+
+### The final result :)
+
+![result image](/docs/img/result.png)
