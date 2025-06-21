@@ -1,5 +1,5 @@
 > [!IMPORTANT]  
-> This project follows multiple tutorials on Youtube and the internet. It was used to learn WebGL / OpenGL in general. The DevLog is my own though during this process. If anything is wrong or offends you in here, my bad! :)
+> This **ARCHIVED** project follows multiple tutorials on Youtube and the internet. It was used to learn WebGL / OpenGL in general. The DevLog is my own though during this process. If anything is wrong or offends you in here, my bad! :)
 
 > [!NOTE]  
 > This project was supposed to remain private, but why not show it to the rest of the world in the end? Nothing fancy here, I just write what I followed in the tutorials in my own way.
